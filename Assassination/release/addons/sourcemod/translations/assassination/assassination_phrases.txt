@@ -1,0 +1,172 @@
+// Translation phrases for the Assassination Game Mode.
+// First created by [X6] Herbius on Friday 10th June 2011.
+
+"Phrases"
+{
+	// Not enough players. There must be a minimum of 2 players on each team to run the Assassination mode.
+	"as_notenoughplayers"
+	{
+		"en"	"Not enough players. There must be a minimum of 2 players on each team to run the Assassination mode."
+	}
+
+	// Both team counts now 2 or above. Plugin is active. Restarting...
+	"as_playersriseabovethreshold"
+	{
+		"en"	"Both team counts now 2 or above. Plugin is active. Restarting..."
+	}
+
+	// One or both team counts now below 2. Plugin is dormant. Restarting...
+	"as_playersdropbelowthreshold"
+	{
+		"en"	"One or both team counts now below 2. Plugin is dormant. Restarting..."
+	}
+	
+	// Plugin state changed. Restarting map...
+	//"as_pluginstatechanged"
+	//{
+	//	"en"	"Plugin state changed. Restarting map..."
+	//}
+	
+	// Assigning new assassin failed.
+	"as_newassassinfailed"
+	{
+		"en"	"Assigning new assassin failed."
+	}
+	
+	// Assigning new target failed.
+	"as_newtargetfailed"
+	{
+		"en"	"Assigning new target failed."
+	}
+	
+	// Assassin
+	"as_assassin"
+	{
+		"en"	"Assassin"
+	}
+	
+	// Target
+	"as_target"
+	{
+		"en"	"Target"
+	}
+	
+	// Assassination plugin will load on next map change.
+	"as_pluginloadnextmapchange"
+	{
+		"en"	"Assassination plugin will load on next map change."
+	}
+	
+	// Team names for score counters
+	// Red:
+	"as_red"
+	{
+		"en"	"Red:"
+	}
+	
+	// Blue:
+	"as_blue"
+	{
+		"en"	"Blue:"
+	}
+	
+	// Playing to: (As in playing to a certain amount of points)
+	"as_playingto"
+	{
+		"en"	"Playing to:"
+	}
+	
+	// Please wait until a round has started to re-assign players.
+	"as_switch_states"
+	{
+		"en"	"Please wait until a round has started to re-assign players."
+	}
+	
+	// -----Menu text-----
+	
+	// ===Help Menu===
+	// Assassination, v[version_number]
+	"as_title_help"
+	{
+		"#format"	"{1:s}"
+		"en"		"Assassination, v{1}"
+	}
+	
+	// General plugin help dialogue.
+	// Should not go over 255 characters or it will be truncated.
+	// Newlines (\n) should be used approx. every 64 characters.
+	"as_dialogue_help"
+	{
+		"en"	"In the Assassination game mode, teams can only gain points if\none of their players is the assassin. The first team to\nreach the point limit wins the round."
+	}
+	
+	// ===Score Menu===
+	// Score Menu Title
+	"as_score_menu_title"
+	{
+		"en"	"Scores:"
+	}
+	
+	// This round:
+	"as_this_round"
+	{
+		"#format"	"{1:d}
+		"en"		"This round: {1}"
+	}
+	
+	// In total:
+	"as_in_total"
+	{
+		"#format"	"{1:d}
+		"en"		"In total: {1}"
+	}
+	
+	// ===Switch Menu===
+	// Switch Init Menu Title
+	"as_switch_init_menu_title"
+	{
+		"en"	"Player type:"
+	}
+	
+	// Re-assigning assassin/target cancelled.
+	"as_reassign_cancelled"
+	{
+		"en"	"Re-assigning assassin/target cancelled."
+	}
+	
+	// Player is on incorrect team: <name>
+	"as_player_incorrect_team"
+	{
+		"en"	"Player is on incorrect team:"
+	}
+	
+	// Player is not valid: <name>
+	"as_player_not_valid"
+	{
+		"en"	"Player is not valid:"
+	}
+	
+	// Player not found.
+	"as_player_not_found"
+	{
+		"en"	"Player not found."
+	}
+	
+	// <name> is now the assassin.
+	"as_player_now_assassin"
+	{
+		"en"	"is now the assassin."
+	}
+	
+	// <name> is now the target.
+	"as_player_now_target"
+	{
+		"en"	"is now the target."
+	}
+	
+	// Switch Player Menu Title
+	"as_switch_player_menu_title"
+	{
+		"en"	"Choose player:"
+	}
+}

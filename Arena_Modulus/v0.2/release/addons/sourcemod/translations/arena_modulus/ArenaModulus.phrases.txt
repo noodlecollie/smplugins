@@ -1,0 +1,29 @@
+// Translations for the Arena Modulus mode.
+
+"Phrases"
+{
+	// This string is translated into LANG_SERVER if a mode registers with no description.
+	// Must not be longer than 128 characters.
+	"am_no_description"
+	{
+		"en"	"No description."
+	}
+	
+	// No custom mode has been chosen yet.
+	"am_no_current_mode"
+	{
+		"en"	"There is no custom mode currently being played."
+	}
+	
+	// Description
+	"am_description"
+	{
+		"en"	"Description"
+	}
+	
+	// Forced mode was invalid.
+	"am_force_mode_invalid"
+	{
+		"en"	"A custom mode with an invalid ID was specified manually, ignoring override."
+	}
+}

@@ -1,0 +1,2 @@
+The team change hook has two primary functions: to check that there are enough players on the Red and Blue teams to continue playing, and to check if the Assassin or Target players are leaving their team. If there are any abnormal states, new assassins and targets will be reset to 0.
+

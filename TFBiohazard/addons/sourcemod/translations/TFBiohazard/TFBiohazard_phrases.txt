@@ -1,0 +1,35 @@
+// Translation phrases for the Biohazard game mode.
+// First created by [X6] Herbius on Monday 16th April 2012.
+
+"Phrases"
+{
+	// Health
+	"Health"
+	{
+		"en"	"Health"
+	}
+	
+	// Rage
+	"Rage"
+	{
+		"en"	"Rage"
+	}
+	
+	// Ubercharge
+	"Ubercharge"
+	{
+		"en"	"Ubercharge"
+	}
+	
+	// Teleport status
+	"Teleport charge"
+	{
+		"en"	"Teleport charge"
+	}
+	
+	// Printed when the plugin becomes active and forces a round end.
+	"Time_For_New_Round"
+	{
+		"en"	"Beginning new round..."
+	}
+}

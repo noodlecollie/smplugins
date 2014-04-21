@@ -1,0 +1,22 @@
+== Spawn file system ==
+
+Objective: To remove all info_player_teamspawn and func_respawnroom entities OnMapStart if a spawn file exists and is valid, then to re-populate the map with new info_player_teamspawn entities in order for players to spawn at these points.
+
+File format
+The spawn file for a map is held in the tf/scripts/dmspawn folder and is named "<mapname>_spawns.txt". It is a keyvalues file structured as follows:
+
+"spawns"
+{
+	"n"	<- N is a unique integer, starting at 0.
+	{
+		"angles"		"x y z"		<- Vector.
+		"TeamNum"		"2"			<- Team number 2 is Red, 3 is Blue.
+		"position"		"x y z"		<- Where the spawn should be placed in the map. Not an entity keyvalue.
+	}
+}
+
+Convars
+dmspawn_enabled - default 1. Sets whether the plugin should be active on map start. If 0, no activity will occur.
+
+== Natives and Forwards ==
+

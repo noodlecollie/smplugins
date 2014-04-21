@@ -1,0 +1,22 @@
+// Translations for Stinger.
+
+"Phrases"
+{
+	// Mode name
+	"am_stinger_name"
+	{
+		"en"	"Stinger"
+	}
+	
+	// Mode description
+	"am_stinger_description"
+	{
+		"en"	"Pyros are given Volcano Fragments and Axtinguishers, and must work together to take the Heavies down."
+	}
+	
+	// Mode tagline
+	"am_stinger_tagline"
+	{
+		"en"	"Light and sting to win!"
+	}
+}

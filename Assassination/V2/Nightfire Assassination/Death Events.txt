@@ -1,0 +1,50 @@
+Falling into a death pit:
+Game event "player_death", Tick 2709:
+- "userid" = "2"
+- "victim_entindex" = "1"
+- "inflictor_entindex" = "75"
+- "attacker" = "0"				// <- Attacker is 0.
+- "weapon" = "trigger_hurt"
+- "weaponid" = "0"
+- "damagebits" = "32"
+- "customkill" = "40"
+- "assister" = "-1"
+- "weapon_logclassname" = "trigger_hurt"
+- "stun_flags" = "0"
+- "death_flags" = "0"
+- "silent_kill" = "0"
+- "playerpenetratecount" = "0"
+
+Falling to death:
+Game event "player_death", Tick 6054:
+- "userid" = "2"
+- "victim_entindex" = "1"
+- "inflictor_entindex" = "0"
+- "attacker" = "0"				// <- Attacker is 0.
+- "weapon" = "worldspawn"
+- "weaponid" = "0"
+- "damagebits" = "32"
+- "customkill" = "0"
+- "assister" = "-1"
+- "weapon_logclassname" = "worldspawn"
+- "stun_flags" = "0"
+- "death_flags" = "0"
+- "silent_kill" = "0"
+- "playerpenetratecount" = "0"
+
+Committing suicide with a weapon.
+Game event "player_death", Tick 8158:
+- "userid" = "2"				// <- User ID and Attacker ID are the same.
+- "victim_entindex" = "1"
+- "inflictor_entindex" = "128"
+- "attacker" = "2"				// <- User ID and Attacker ID are the same.
+- "weapon" = "liberty_launcher"
+- "weaponid" = "22"
+- "damagebits" = "2359360"
+- "customkill" = "0"
+- "assister" = "-1"
+- "weapon_logclassname" = "liberty_launcher"
+- "stun_flags" = "0"
+- "death_flags" = "0"
+- "silent_kill" = "0"
+- "playerpenetratecount" = "0"

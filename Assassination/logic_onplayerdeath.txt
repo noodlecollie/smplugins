@@ -1,0 +1,48 @@
+If the assassin has died:
+{
+	If the killer was another player and from the opposite team:
+	{
+		Clear the assassin index;
+		Clear the target index;
+		
+		Set the assassin index to that of the killer player;
+		Set the target index to that of a random player from the former assassin's team;
+	}
+	
+	/*
+	If the killer was another player and from the opposite team AND was the target:
+	{
+		Award points;
+	}
+	*/
+	
+	If the killer was not a player OR if the killer was a player from the same team OR if it was suicide:
+	{
+		Clear the assassin index;
+		Clear the target index;
+		Set the assassin index to that of a random player from the opposite team;
+		Set the target index to that of a random player from the former assassin's team;
+	}
+}
+
+If the target has died:
+{
+	/*
+	If the killer was another player from the opposite team AND was the assassin:
+	{
+		Award points;
+	}
+	*/
+	
+	If the killer was not a player or if it was suicide:
+	{
+		Clear the target index;
+		Set the target index to that of a random player from the former target's team, excluding the former target.
+	}
+	
+	If the killer was an enemy player:
+	{
+		Clear the target index;
+		Choose a new target from the late target's team.
+	}
+}

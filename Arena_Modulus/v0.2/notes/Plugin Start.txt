@@ -1,0 +1,1 @@
+It will be possible for the Arena Modulus plugin to be loaded while a normal round is currently being played.

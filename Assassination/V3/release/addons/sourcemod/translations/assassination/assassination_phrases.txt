@@ -1,0 +1,139 @@
+// Translation phrases for the Assassination Game Mode.
+// First created by [X6] Herbius on Friday 10th June 2011.
+// Latest update: 24/10/11
+
+"Phrases"
+{
+	// Assigning new assassin failed.
+	"as_newassassinfailed"
+	{
+		"en"	"Assigning new assassin failed."
+	}
+	
+	// Assigning new target failed.
+	"as_newtargetfailed"
+	{
+		"en"	"Assigning new target failed."
+	}
+	
+	// Assassin
+	"as_assassin"
+	{
+		"en"	"Assassin"
+	}
+	
+	// Target
+	"as_target"
+	{
+		"en"	"Target"
+	}
+	
+	// Team names for score counters
+	// Red:
+	"as_red"
+	{
+		"en"	"Red:"
+	}
+	
+	// Blue:
+	"as_blue"
+	{
+		"en"	"Blue:"
+	}
+	
+	// Playing to: (as in playing to a certain amount of points)
+	"as_playingto"
+	{
+		"en"	"Playing to:"
+	}
+	
+	// Cannot re-assign players now.
+	"as_cannot_reassign_now"
+	{
+		"en"	"Cannot re-assign players now. Please wait until a round is in progress."
+	}
+	
+	// Displayed if no assassin or target exists.
+	"as_none"
+	{
+		"en"	"None"
+	}
+	
+	// Unable to re-assign Assassin.
+	"as_unable_to_reassign_assassin"
+	{
+		"en"	"Assassin was unable to be re-assigned."
+	}
+	
+	// Assassin has been re-assigned.
+	"as_assassin_reassigned"
+	{
+		"#format"	"{1:s}"
+		"en"	"Player {1} has been made the Assassin."
+	}
+	
+	// Unable to re-assign Target.
+	"as_unable_to_reassign_target"
+	{
+		"en"	"Target was unable to be re-assigned."
+	}
+	
+	// Target has been re-assigned.
+	"as_target_reassigned"
+	{
+		"#format"	"{1:s}"
+		"en"	"Player {1} has been made the Target."
+	}
+	
+	// Client menu could not be created.
+	"as_menu_cannot_be_created"
+	{
+		"en"	"The client menu could not be created."
+	}
+	
+	// The round has been won.
+	"as_round_win"
+	{
+		"#format"	"{1:s},{2:d}"
+		"en"		"{1} wins with {2} points!"
+	}
+	
+	// -----Menu text-----
+	
+	// ===Help Menu===
+	// Assassination, v[version_number]
+	"as_title_help"
+	{
+		"#format"	"{1:s}"
+		"en"		"Assassination, v{1}"
+	}
+	
+	// General plugin help dialogue.
+	// Should not go over 255 characters or it will be truncated.
+	// Newlines (\n) should be used approx. every 64 characters.
+	"as_dialogue_help"
+	{
+		"en"	"In the Assassination game mode, teams can only gain points if\none of their players is the assassin. The first team to\nreach the point limit wins the round."
+	}
+	
+	// ===Score Menu===
+	// Score Menu Title
+	"as_score_menu_title"
+	{
+		"en"	"Scores:"
+	}
+	
+	// This round:
+	"as_this_round"
+	{
+		"#format"	"{1:d}"
+		"en"		"This round: {1}"
+	}
+	
+	// In total:
+	"as_in_total"
+	{
+		"#format"	"{1:d}"
+		"en"		"In total: {1}"
+	}
+}

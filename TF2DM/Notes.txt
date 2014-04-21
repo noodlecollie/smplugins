@@ -1,0 +1,60 @@
+Classic deathmatch-style gameplay where weapons can be picked up.
+Players begin with a default weapon specific to their class and can pick up different weapons that belong to their class.
+Players respawn at deathmatch spawn points using the dmspawn plugin (packaged with tf2dm).
+
+Weapon sets with slots 0-7, ammo provided by pickups.
+Slot 0 is the starting weapon, slots 1-7 are pickups.
+Pickups can either be a specific weapon (which must be defined for each class), a random primary/secondary/melee weapon, a completely random weapon or nothing.
+
+Example weaponset format in scripts/tf2dm/weaponsets.txt:
+
+"weaponsets"									// Root node.
+{
+	"setname"									// Unique string identifier of the weapon set. If the same as a previous name, the set will be ignored.
+	{
+		"name"	"Weaponset Name"				// Descriptive name of the weapon set, used in menus.
+		"slot"									// Specifies that slot data is contained below.
+		{
+			"id"	"0"							// Specifies the slot number. Will override configs for previously defined slots.
+			"heavyweapons"						// Specifies data relating to a specific class (same identifiers as tf_bot). "all" specifies all classes and cannot use specific weapons (specific will default to random).
+			{
+				"weapon"	"WEAPON_PRIMARY  WEAPON_SECONDARY"	// Multiple flags of WEAPON_SPECIFIC, _PRIMARY, _SECONDARY, _MELEE, _RANDOM or _NONE, separated by spaces. WEAPON_SPECIFIC overrides all other flags.
+				"index"		"100"								// Only used with WEAPON_SPECIFIC; contains the item definition index to use for the weapon.
+																// Multiple indices can be specified, separated with spaces, and a random index will be chosen.
+			}
+			
+			"soldier"							// Class descriptors continue in the same fashion.
+			...
+		}
+		
+		"slot"									// Slot descriptors continue in the same fashion. Undefined slots are assumed to be empty and will not be used.
+		...
+	}
+}
+
+Example map config in scripts/tf2dm/[mapname]_tf2dm.txt:
+
+"mapconfig"						// Root node.
+{
+	"healthpack"				// Custom health packs:
+	{
+		"origin"	"x y z"		// Vector position for health pack.
+		"size"		"2"			// 0 = small, 1 = medium, 2 = large.
+	}
+	
+	"ammopack"					// Custom ammo packs:
+	{
+		"origin"	"x y z"		// Vector position for ammo pack.
+		"size"		"2"			// 0 = small, 1 = medium, 2 = large.
+	}
+	
+	"powerup"					// Power-ups:
+	{
+		"origin"	"x1 y1 z1"	// Multiple possible spawn points for the powerup.
+		"origin"	"x2 y2 z2"
+		...
+		
+		"type"		"crit"		// Power-up type: one of crit, minicrit, speed, defense, uber, cola.
+		"duration"	"3"			// Duration of the power-up in seconds.
+	}
+}

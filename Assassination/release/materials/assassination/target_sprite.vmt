@@ -1,0 +1,12 @@
+// The target sprite is the image that will be displayed over the head of the target
+// in the world. It is different from the target icon, which is the icon displayed on
+// the target player's HUD.
+
+"UnlitGeneric"
+{
+	"$basetexture" "assassination/target_sprite"
+	"$spriteorientation" "vp_parallel"
+	"$spriteorigin" "[ 0.50 0.50 ]"
+//	"$ignorez" "1"
+	"$translucent"	"1"
+}

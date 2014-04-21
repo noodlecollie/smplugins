@@ -1,0 +1,149 @@
+Format:
+"player_death"		// a game event, name may be 32 charaters long
+	{
+		// this extends the original player_death 
+		"userid"	"short"   	// user ID who died				
+		"victim_entindex"	"long"
+		"inflictor_entindex"	"long"	// ent index of inflictor (a sentry, for example)
+		"attacker"	"short"	 	// user ID who killed
+		"weapon"	"string" 	// weapon name killer used 
+		"weaponid"	"short"		// ID of weapon killer used
+		"damagebits"	"long"		// bits of type of damage
+		"customkill"	"short"		// type of custom kill
+		"assister"	"short"		// user ID of assister
+		"weapon_logclassname"	"string" 	// weapon name that should be printed on the log
+		"stun_flags"	"short"	// victim's stun flags at the moment of death
+		"death_flags"	"short" //death flags.
+		"silent_kill"	"bool"
+	}
+
+Normal player death (scout killed by soldier with black box):
+Game event "player_death", Tick 7368:
+- "userid" = "3"
+- "victim_entindex" = "2"
+- "inflictor_entindex" = "136"
+- "attacker" = "2"
+- "weapon" = "blackbox"
+- "weaponid" = "22"
+- "damagebits" = "2359360"
+- "customkill" = "0"
+- "assister" = "-1"
+- "weapon_logclassname" = "blackbox"
+- "stun_flags" = "0"
+- "death_flags" = "128"
+- "silent_kill" = "0"
+
+Finished off:
+Game event "player_death", Tick 14342:
+- "userid" = "2"
+- "victim_entindex" = "1"
+- "inflictor_entindex" = "-1"
+- "attacker" = "3"
+- "weapon" = "world"
+- "weaponid" = "0"
+- "damagebits" = "0"
+- "customkill" = "6"
+- "assister" = "-1"
+- "weapon_logclassname" = "world"
+- "stun_flags" = "0"
+- "death_flags" = "128"
+- "silent_kill" = "0"
+
+Sentry kill:
+Game event "player_death", Tick 16595:
+- "userid" = "2"
+- "victim_entindex" = "1"
+- "inflictor_entindex" = "128"
+- "attacker" = "3"
+- "weapon" = "obj_sentrygun3"
+- "weaponid" = "0"
+- "damagebits" = "4098"
+- "customkill" = "0"
+- "assister" = "-1"
+- "weapon_logclassname" = "obj_sentrygun3"
+- "stun_flags" = "0"
+- "death_flags" = "0"
+- "silent_kill" = "0"
+
+Suicide:
+Game event "player_death", Tick 18406:
+- "userid" = "2"
+- "victim_entindex" = "1"
+- "inflictor_entindex" = "145"
+- "attacker" = "2"
+- "weapon" = "blackbox"
+- "weaponid" = "22"
+- "damagebits" = "2359360"
+- "customkill" = "0"
+- "assister" = "-1"
+- "weapon_logclassname" = "blackbox"
+- "stun_flags" = "0"
+- "death_flags" = "128"
+- "silent_kill" = "0"
+
+Fall to death:
+Game event "player_death", Tick 20859:
+- "userid" = "2"
+- "victim_entindex" = "1"
+- "inflictor_entindex" = "0"
+- "attacker" = "0"
+- "weapon" = "worldspawn"
+- "weaponid" = "0"
+- "damagebits" = "32"
+- "customkill" = "0"
+- "assister" = "-1"
+- "weapon_logclassname" = "worldspawn"
+- "stun_flags" = "0"
+- "death_flags" = "0"
+- "silent_kill" = "0"
+
+Sentry destroyed:
+Game event "object_destroyed", Tick 27638:
+- "userid" = "3"
+- "attacker" = "2"
+- "assister" = "0"
+- "weapon" = "blackbox"
+- "weaponid" = "22"
+- "objecttype" = "2"
+- "index" = "128"
+- "was_building" = "0"
+
+Format:
+"player_team"				// player change his team
+	{
+		"userid"	"short"		// user ID on server
+		"team"		"byte"		// team id the player is joining
+		"oldteam" "byte"		// old team id (0 if none)
+		"disconnect" "bool"	// team change because player disconnects
+		"autoteam"	"bool"	// team was auto-assigned
+	}
+
+First client join:
+Game event "player_team", Tick 1406:
+- "userid" = "2"
+- "team" = "3"
+- "oldteam" = "0"
+- "disconnect" = "0"
+- "autoteam" = "0"
+- "silent" = "0"
+- "name" = "[X6] Herbius"
+
+Bot join:
+Game event "player_team", Tick 17800:
+- "userid" = "3"
+- "team" = "2"
+- "oldteam" = "0"
+- "disconnect" = "0"
+- "autoteam" = "1"
+- "silent" = "0"
+- "name" = "The G-Man"
+
+Bot leave:
+Game event "player_team", Tick 20408:
+- "userid" = "3"
+- "team" = "0"
+- "oldteam" = "2"
+- "disconnect" = "1"
+- "autoteam" = "0"
+- "silent" = "0"
+- "name" = "The G-Man"

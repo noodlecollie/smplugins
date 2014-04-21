@@ -1,0 +1,31 @@
+Zombies are tinted with an intensity proportional to their amount of health. [x]
+First zombies to spawn get crits for 6 seconds. []
+Scale zombie speed with players left. []
+Scale zombie pushback with players left. []
+Last 2 players get mini-crits. []
+Last player gets crits. []
+Zombies gain rage quicker the nearer they are to players. []
+Zombie health values are specified with both scale factors and numbers of players. []
+Players choose the zombie they wish to spawn as when the round starts. []
+
+Red:
+Scout - Runs at full speed when melee is out (unless with Sandman or Atomiser), runs at Medic speed otherwise. Mad Milk takes away 10% of a zombie's rage (if they are not already raging) as well as doing normal Milk effects.
+Soldier - Activating the Buff Banner gives both mini-crits and the Batallion's Backup effect. Equipping the Batallion's Backup replaces it with the Buff Banner.
+Pyro - Airblasting a zombie gives all zombies within a 300 unit radius mini-crits for 2 seconds, as well as increasing the airblasted zombie's rage by 5%.
+Demo - Shields block critical hits from doing damage but are removed once they have done so.
+Heavy - Brass beast takes 6 health for every second the primary slot is active. Whenever a minigun is out the Heavy moves at spun-up speed.
+Engineer - Sentries only deal half knockback force. Sentries are stunned if they are within 128 units of a zombie when the zombie rages. Sentries die when the Engineer dies. Sentries cannot be repaired when damaged.
+Medic - Syringe hits gain 3% Ubercharge.
+Sniper - Jarateing zombies takes away 15% of their rage (if they are not currently raging) as well as doing normal Jarate effects. Snipers have increased knockback.
+Spy - A successful backstab grants crits, a speed boost and gives nearby players mini-crits for 8 seconds. Cloak and Dagger is replaced with the normal watch. Spies can disguise as zombies and are tinted green to match when they do so.
+
+Blue:
+Scout - On a successful stun with the sandman, the target player is unable to move for 5 seconds and players within 300 units of him have the normal stun effect for 3 seconds.
+Soldier - Pain Train ups speed to 1.5x.
+Pyro - Anyone stunned by rage will also be ignited.
+Demo - Pain Train ups speed to 1.5x.
+Heavy - 
+Engineer - Can teleport to a random player (cooldown timer 60 seconds) and bring players with him who are standing within 128 units (maximum 2 players).
+Medic - If raging with the Amputator out, zombies around the Medic are granted crits. Hits with the Ubersaw grant 30% rage. Raging with the Ubersaw gives players within 200 units Ubercharge (but not the Medic).
+Sniper - Can use Jarate.
+Spy - Is not pushed back by sentries. Can sap sentries. Is given 100% rage (if not currently raging) on a successful backstab. Can disguise as a Red player.

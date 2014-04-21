@@ -1,0 +1,3 @@
+Since 1-vs-all is a very different game mode from the team-based mode, we'll need to re-plan what will go on.
+
+When a player spawns, the team counts will be checked. If a player spawns on Red when the global assassin variable is 0, their user ID will be noted in the variable. If a player spawns on Red who does not match the assassin ID, they will be switched to Blue. If a player spawns on Blue when the assassin variable is 0, they will be switched to Red. If a player spawns on Blue when the assassin ID is valid and they do not match the ID, they are left alone.

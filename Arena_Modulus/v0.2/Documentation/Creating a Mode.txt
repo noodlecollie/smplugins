@@ -1,0 +1,11 @@
+Arena Modulus modes are separate SourceMod plugins that are loaded by the main handler plugin. TODO: STUFF ABOUT DEPENDENCIES.
+
+This is the process in which modes are loaded into the handler:
+
+- Each time a map is loaded, the main handler will call the ArenaMod_SearchForModes forward. Any custom modes must implement this forward and call the ArenaMod_RegisterMode native, giving their name (not more than 64 characters), their description (not more than 128 characters) and their minimum player counts for the Red and Blue teams respectively. The mode's name and description should be pre-translated into LANG_SERVER via SourceMod's Format function, as these will be displayed to players in menus. The RegisterMode native will return the mode's ID, which is used to determine which mode to play: when a round starts, this ID is broadcast over the ArenaMod_RoundStart forward and whichever mode matches the ID should enable itself and start running. The ArenaMod_SearchForModes forward will be called each and every map start so there is no guarantee than a mode's assigned ID will be the same between maps, and custom modes should prepare to have their resources cleaned up on each map end, and loaded again on each map start.
+
+- When a round starts, the main handler will determine which mode to play. If no appropriate mode can be found, a normal Arena round will be played. If a mode is decided upon then the ArenaMod_RoundStart forward will be called, broadcasting the chosen mode's ID. Whichever mode matches this ID should enable itself and start executing its RoundStart code. Note that the teamplay_round_start event should NOT be hooked in a custom mode, as this would cause code from the mode to execute regardless of whether it was chosen by the handler.
+
+- If a mode needs to interrupt the current round (for example, if its player count falls below required levels), the mode should call ArenaMod_CancelCurrentRound which will end the round and call the mode cleanup functions (see below).
+
+- Custom modes should use the ArenaMod_RoundEnd (with a mode ID check) forward to reset any variables, close any handles, etc, that need cleaning up. The same cleanup operation should be called from ArenaMod_MapEnd as well, except that this forward calls on all the modes to clean up their events and so does not broadcast an ID.

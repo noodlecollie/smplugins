@@ -1,0 +1,135 @@
+// Translation phrases for the Deathmatch Spawn File Creator.
+// First created by [X6] Herbius on Monday 15th A 2011.
+
+"Phrases"
+{
+	// Deathmatch spawn plugin loaded while round is active. Plugin will be activated on map change.
+	"dms_pluginloadnextmapchange"
+	{
+		"en"	"Deathmatch spawn plugin loaded while round is active. Plugin will be activated on map change."
+	}
+	
+	// No spawn file found for map <mapname>.
+	"dms_no_spawns_found"
+	{
+		"en"	"No spawn file found for map"
+	}
+	
+	// File handle invalid.
+	"dms_file_handle_invalid"
+	{
+		"en"	"File handle invalid."
+	}
+	
+	// First key 'spawns' not found in file.
+	"dms_keyvalues_handle_invalid"
+	{
+		"en"	"First key 'spawns' not found in file."
+	}
+	
+	// Not currently in edit mode.
+	"dms_not_in_edit_mode"
+	{
+		"en"	"Not currently in edit mode."
+	}
+	
+	// No spawn points loaded for map.
+	"dms_no_spawns_loaded"
+	{
+		"en"	"No spawn points loaded for map."
+	}
+	
+	// Maximum spawn point limit reached.
+	"dms_max_spawns"
+	{
+		"en"	"Maximum spawn point limit reached."
+	}
+	
+	// Spawn <spawn> created for team <teamnum>.
+	"dms_spawn_created"
+	{
+		"#format"	"{1:d},{2:d}"
+		"en"		"Spawn {1} created for team {2}.
+	}
+	
+	// Aim target is not a spawn point.
+	"dms_no_remove_target"
+	{
+		"en"	"No nearby spawn points."
+	}
+	
+	// Spawn point <x> removed.
+	"dms_spawn_removed"
+	{
+		"#format"	"{1:d}"
+		"en"		"Spawn point {1} removed."
+	}
+	
+	// All spawns removed.
+	"dms_all_spawns_removed"
+	{
+		"en"	"All spawns removed."
+	}
+	
+	// Spawn information saved to file <s>.
+	"dms_kv_savedtofile"
+	{
+		"#format"	"{1:s}"
+		"en"		"Spawn information saved to file {1}"
+	}
+	
+	// Spawn information unable to be saved.
+	"dms_kv_notsaved"
+	{
+		"en"	"Error: Spawn information unable to be saved."
+	}
+	
+	// Cannot create a spawn point while crouching, to avoid players getting stuck when teleported standing up.
+	"dms_crouching"
+	{
+		"en"	"Creating a spawn point while crouching is not allowed."
+	}
+	
+	// Edit mode already enabled by client <name>.
+	// Does not require a space at the end of the phrase.
+	"dms_edit_mode_already_enabled"
+	{
+		"en"	"Edit mode is already enabled by client"
+	}
+	
+	// Client must be on a valid team to edit spawn points.
+	"dms_team_not_valid"
+	{
+		"en"	"You must be on a valid team to edit spawn points."
+	}
+	
+	// Client must be alive to edit.
+	"dms_player_not_alive"
+	{
+		"en"	"You must be alive to edit spawn points."
+	}
+	
+	// Re-generating spawn queue failed.
+	"dms_queue_regen_failed"
+	{
+		"en"	"Re-generating the spawn queue failed."
+	}
+	
+	// Queue has been re-generated. Next spawn index to use: <n>
+	"dms_queue_regen_succeeded"
+	{
+		"en"	"Queue has been re-generated. Next spawn index to use:"
+	}
+	
+	// Re-generating the queue while in edit mode is not allowed.
+	"dms_no_regen_in_edit_mode
+	{
+		"en"	"Re-generating the queue while in edit mode is not allowed."
+	}
+	
+	// Spawn mode is not queued.
+	"dms_not_in_queued_mode"
+	{
+		"en"	"ConVar 'dmspawn_mode' not in queued mode."
+	}
+}

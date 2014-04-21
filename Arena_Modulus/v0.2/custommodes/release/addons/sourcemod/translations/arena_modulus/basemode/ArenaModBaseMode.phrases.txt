@@ -1,0 +1,22 @@
+// Translations for the Arena Modulus mode base.
+
+"Phrases"
+{
+	// Mode name
+	"am_base_name"
+	{
+		"en"	"Arena Modulus Base Mode"
+	}
+	
+	// Mode tagline
+	"am_base_tagline"
+	{
+		"en"	"This is a tagline! :3"
+	}
+	
+	// Mode description
+	"am_base_description"
+	{
+		"en"	"A custom mode base for the Arena Modulus game mode."
+	}
+}

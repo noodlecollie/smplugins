@@ -1,0 +1,6 @@
+The plugin is going to have to be required to deal with any number of players effectively. When a player spawns, the plugin will need to check the current state of the players and act accordingly.
+
+- If a player spawns and there are no players on the other team, set the assassin and target indices to 0.
+- If a player spawns, there is at least one player on the other team and the assassin and target indices are set to 0, assign the assassin and target.
+- If a player spawns, the assassin is invalid but the target is valid, assign the assassin to someone on the opposite team.
+- If a player spawns, the target is invalid but the assassin is valid, assign the target to someone on the opposite team.

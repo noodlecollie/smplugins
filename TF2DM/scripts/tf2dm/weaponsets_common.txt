@@ -1,0 +1,19 @@
+// Common weapon sets.
+
+"weaponsets"
+{
+	"RANDOM"	// Random weapons.
+	{
+		"name"	"Random"
+		
+		"slot"
+		{
+			"id"	"0"
+			
+			"all"
+			{
+				"weapon"	"WEAPON_RANDOM"
+			}
+		}
+	}
+}

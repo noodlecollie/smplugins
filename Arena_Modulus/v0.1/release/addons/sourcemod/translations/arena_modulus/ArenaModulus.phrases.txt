@@ -1,0 +1,152 @@
+// Translations for the Arena Modulus mode.
+
+"Phrases"
+{
+	// Plugin has been loaded on an active server.
+	"am_pluginloadnextmapchange"
+	{
+		"en"	"Arena Modulus plugin loaded while round is active. Plugin will be activated on map change."
+	}
+	
+	// ====================
+	// == Mode Vote Menu ==
+	// ====================
+	
+	// Menu title
+	"am_mode_vote_menu_title"
+	{
+		"en"	"Choose a mini-mode:"
+	}
+	
+	// Results title
+	"am_mode_vote_results_title"
+	{
+		"en"	"Top three votes so far:"
+	}
+	
+	// x seconds remaining
+	"am_seconds_remaining"
+	{
+		"#format"	"{1:d}"
+		"en"		"{1} seconds remaining..."
+	}
+	
+	// Final vote numbers:
+	"am_mode_vote_results"
+	{
+		"en"	"Final vote numbers:"
+	}
+	
+	// ====================
+	// ====== Modes =======
+	// ====================
+	
+	// MODE_NONE
+	"am_name_normal_round"
+	{
+		"en"	"Normal Arena round."
+	}
+	
+	"am_desc_normal_round"
+	{
+		"en"	"Standard, unmodified round of Arena."
+	}
+	
+	// ====================
+	// = Light and  Sting =
+	// ====================
+	
+	"am_name_light_sting"
+	{
+		"en"	"Light and Sting"
+	}
+	
+	"am_description_light_sting"
+	{
+		"en"	"Pyros must work together to take the Heavies down."
+	}
+	
+	// ====================
+	// ===== Wetwork ======
+	// ====================
+	
+	"am_name_wetwork"
+	{
+		"en"	"Wetwork"
+	}
+	
+	"am_description_wetwork"
+	{
+		"en"	"Players cannot be damaged unless they are Jarated."
+	}
+	
+	// ====================
+	// ===== Sentries =====
+	// ====================
+	
+	"am_name_sentries"
+	{
+		"en"	"Sentries"
+	}
+	
+	"am_description_sentries"
+	{
+		"en"	"Collect metal to upgrade your sentry and defeat the spies. Collecting metal removes sappers."
+	}
+	
+	// ====================
+	// ===== Targets ======
+	// ====================
+	
+	"am_name_targets"
+	{
+		"en"	"Targets"
+	}
+	
+	"am_description_targets"
+	{
+		"en"	"A team's target player is the only one who can hurt or be hurt by enemy players."
+	}
+	
+	// ====================
+	// === Boss Battle ====
+	// ====================
+	
+	"am_name_bossbattle"
+	{
+		"en"	"Boss Battle"
+	}
+	
+	"am_description_bossbattle"
+	{
+		"en"	"One player becomes a boss class with increased health and special abilities."
+	}
+	
+	// ====================
+	// === Shield Bash ====
+	// ====================
+	
+	"am_name_shieldbash"
+	{
+		"en"	"Shield Bash"
+	}
+	
+	"am_description_shieldbash"
+	{
+		"en"	"Players start on 1 HP and must shield bash each other to win. Watch out for fall damage!"
+	}
+	
+	// ====================
+	// == Sandvich Bombs ==
+	// ====================
+	
+	"am_name_sandvich_bombs"
+	{
+		"en"	"Sandvich Bombs"
+	}
+	
+	"am_description_sandvich_bombs"
+	{
+		"en"	"Your Sandvich will explode on contact with an enemy."
+	}
+}

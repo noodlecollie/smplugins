@@ -1,0 +1,12 @@
+// The assassin sprite is the image that will be displayed over the head of the assassin
+// in the world. It is different from the assassin icon, which is the icon displayed on
+// the assassin player's HUD.
+
+"UnlitGeneric"
+{
+	"$basetexture" "assassination/assassin_sprite"
+	"$spriteorientation" "vp_parallel"
+	"$spriteorigin" "[ 0.50 0.50 ]"
+//	"$ignorez" "1"
+	"$translucent"	"1"
+}

@@ -1,0 +1,139 @@
+// Assassination weapon modifiers file.
+// Weapon modifiers are intended to help balance the scoring by allowing certain kill to score more or less points than others.
+// This file is ONLY loaded when the plugin starts for the first time, and is NOT loaded when a new map starts.
+// If you make changes to this file while the server is running, either restart the server or unload/reload the plugin.
+
+// This file is formatted with a list of keys and corresponding values.
+// All weapon indices and values are found under the root branch "weapons".
+// Each weapon should have its own sub-section with two key-value pairs inside: the weapon ID and the modifier value. The number assigned to the sub-section
+// is unimportant but should be a unique integer. It is recommended to go up in consecutive integers, starting from 0, purely for neatness/personal reference.
+// The "weaponid" key is the item definition index of the weapon (found in the TF2 Content GCF at tf/scripts/items/items_game.txt or at
+// http://wiki.alliedmods.net/Team_Fortress_2_Item_Definition_Indexes). IDs start at 0 (Scout bat).
+// The "modifier" key is the score modifier for the weapon. The modifier value should be formatted as a float (ie. the integer "2" would be written as "2.0").
+// When the assassin is killed by the target (or vice-versa), the amount of points scored is the base value (found in nfas_assassin_kill_points and
+// nfas_target_kill_points)	multiplied by the weapon modifier, multiplied by the kill type modifier. Kill type modifiers deal with whether the kill
+// was a headshot, backstab, etc, and can be found in the following ConVars:
+// nfas_headshot_multiplier			for headshots;
+// nfas_backstab_multiplier			for backstabs;
+// nfas_reflect_multiplier			for reflect projectiles;
+// nfas_sentry_level1_multiplier	for level 1 sentries;
+// nfas_sentry_level2_multiplier	for level 2 sentries;
+// nfas_sentry_level3_multiplier	for level 3 sentries;
+// nfas_telefrag_multiplier			for if a player is telefragged.
+
+// If a weapon ID is not included in the file, its modifier is assumed to be 1 (no change).
+// If the modifier value is less than 0, it is treated as 0.
+
+// Entries are formatted as follows:
+// "0"												<- Unique integer for the weapon sub-section
+// {
+//		"weaponid"		"0"							<- ID of the weapon
+//		"modifier"		"1.5"						<- Value of the multiplier
+// }
+
+// Note that if the root "weapons" branch cannot be found, the file will NOT be read.
+
+// ******************************************
+
+// These are default settings; tweak to your liking.
+
+"weapons"
+{
+	// Scout bat
+	"0"
+	{
+		"weaponid"		"0"
+		"modifier"		"2.0"
+	}
+	
+	// Demo bottle
+	"1"
+	{
+		"weaponid"		"1"
+		"modifier"		"2.0"
+	}
+	
+	// Soldier shovel
+	"2"
+	{
+		"weaponid"		"6"
+		"modifier"		"2.0"
+	}
+	
+	// Pyro fireaxe
+	"3"
+	{
+		"weaponid"		"2"
+		"modifier"		"2.0"
+	}
+	
+	// Engineer wrench
+	"4"
+	{
+		"weaponid"		"7"
+		"modifier"		"2.0"
+	}
+	
+	// Heavy fists
+	"5"
+	{
+		"weaponid"		"5"
+		"modifier"		"2.0"
+	}
+	
+	// Medic bonesaw
+	"6"
+	{
+		"weaponid"		"8"
+		"modifier"		"2.0"
+	}
+	
+	// Sniper Kukri
+	"7"
+	{
+		"weaponid"		"3"
+		"modifier"		"2.0"
+	}
+	
+	// Spy knife (backstabs handled elsewhere)
+	"8"
+	{
+		"weaponid"		"4"
+		"modifier"		"1.0"
+	}
+	
+	// Minigun
+	"9"
+	{
+		"weaponid"		"15"
+		"modifier"		"0.333"
+	}
+	
+	// Rocket launcher
+	"10"
+	{
+		"weaponid"		"18"
+		"modifier"		"0.5"
+	}
+	
+	// Brass Beast
+	"11"
+	{
+		"weaponid"		"312"
+		"modifier"		"0.2"
+	}
+	
+	// Sticky launcher
+	"12"
+	{
+		"weaponid"		"20"
+		"modifier"		"0.5"
+	}
+	
+	// Grenade launcher
+	"13"
+	{
+		"weaponid"		"19"
+		"modifier"		"0.5"
+	}
+}
