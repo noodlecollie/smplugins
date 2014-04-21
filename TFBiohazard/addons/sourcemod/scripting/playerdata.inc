@@ -1,0 +1,307 @@
+/**
+ * userdata.inc - Defines player data arrays used by the plugin.
+ * This is where things like player zombie status, rage level etc. are stored.
+ * Players joining the game should be registered into these data arrays and should be removed when they leave.
+ */
+
+#include <sourcemod>
+
+// To add a new property:
+// 1. Add a new entry to the PlayerData enum.
+// 2. Add a default in the appropriate place in ValueDefaults.
+// 3. Add an accessor using IMPLEMENT_PROPERTY_ACCESSOR.
+// 4. Add a mutator using IMPLEMENT_PROPERTY_MUTATOR.
+
+// To add a new state flag:
+// 1. Add a new entry to the UserStateFlags enum.
+
+#define TOTAL_SLOTS     MAXPLAYERS  // Total number of slots available for player data.
+#define INVALID_USERID  0           // Invalid user ID.
+
+enum PlayerData             // Properties held for each player.
+{
+    UserId,                 // User ID of the player whose info is stored at this index.
+    StateFlags,             // Used to collect together flags such as zombie status and ubercharge readiness - see below.
+    CurrentHealth,          // Current health a zombie has.
+    MaxHealth,              // Max health a zombie can have.
+    Float:RageLevel,        // Current rage level.
+    JarateRef,              // Entity references for thrown Jarate jars.
+    Float:TeleportLevel     // Current teleport charge for zombie Engineers.
+}
+#define TOTAL_PROPERTIES PlayerData     // Total number of slots required for stored player properties.
+
+enum UserStateFlags                // Flags used with the StateFlags property.
+{
+    UsrZombie =        (1 << 0),   // Whether the given user is a zombie.
+    UsrStartBoost =    (1 << 1),   // Whether the user gets a critboost for being a Patient Zero.
+    UsrRaging =        (1 << 2),   // Whether the user is currently in rage.
+    UsrSuperJump =     (1 << 3),   // Whether the user is in the air after having super jumped.
+    UsrJumpPrevFrame = (1 << 4),   // The state of the user's jump buttons on the previous frame.
+    UsrUberReady =     (1 << 5)    // The user has an Ubercharge ready.
+}
+#define TOTAL_FLAGS         UserStateFlags          // Total number of flags.
+#define FLAG_SANITY_CHECK   _:UserStateFlags <= 32  // Evaluates to false if there are more flags than we can store in a single cell.
+
+static ValueDefaults[PlayerData] =    // Holds the default values for each property.
+{
+    INVALID_USERID,         // No userid
+    _:UsrZombie,            // Client starts as a zombie
+    0,                      // 0 health
+    0,                      // 0 max health
+    0.0,                    // 0 rage level
+    INVALID_ENT_REFERENCE,  // No jarate reference
+    0.0                     // 0 teleport level
+}
+
+static PlayerDataArray[TOTAL_SLOTS][TOTAL_PROPERTIES];   // Main array that holds property data for players.
+static NumOccupiedSlots = 0;                        // Number of slots that are occupied. They aren't contiguous (ie. the highest occupied slot number is probably higher than this).
+                                                    // Note that this is only accurate if only the functions below are used for modifying the data.
+
+// Note: I'm not exactly sure on what the SourceMod conventions are for this kind of thing, but
+// the functions below that are prefixed with an underscore (_PD) are accessor functions which do not modify the array data.
+// If the function is not prefixed with an underscore (PD) it does modify data.
+
+// Accessors for properties.
+#define IMPLEMENT_PROPERTY_ACCESSOR(%0,%1) stock %0:_PD_Get%1(slot) { return PlayerDataArray[slot][%1]; }
+IMPLEMENT_PROPERTY_ACCESSOR(_,UserId)               // _PD_GetUserId
+IMPLEMENT_PROPERTY_ACCESSOR(_,StateFlags)           // _PD_GetStateFlags
+IMPLEMENT_PROPERTY_ACCESSOR(_,CurrentHealth)        // _PD_GetCurrentHealth
+IMPLEMENT_PROPERTY_ACCESSOR(_,MaxHealth)            // _PD_GetMaxHealth
+IMPLEMENT_PROPERTY_ACCESSOR(Float,RageLevel)        // Float:_PD_GetRageLevel
+IMPLEMENT_PROPERTY_ACCESSOR(_,JarateRef)            // _PD_GetJarateRef
+IMPLEMENT_PROPERTY_ACCESSOR(Float,TeleportLevel)    // Float:_PD_GetTeleportLevel
+
+// Mutators for properties.
+#define IMPLEMENT_PROPERTY_MUTATOR(%0,%1) stock PD_Set%1(slot, %0:value) { PlayerDataArray[slot][%1] = value; }
+IMPLEMENT_PROPERTY_MUTATOR(_,UserId)                // PD_SetUserId
+IMPLEMENT_PROPERTY_MUTATOR(_,StateFlags)            // PD_SetStateFlags
+IMPLEMENT_PROPERTY_MUTATOR(_,CurrentHealth)         // PD_SetCurrentHealth
+IMPLEMENT_PROPERTY_MUTATOR(_,MaxHealth)             // PD_SetMaxHealth
+IMPLEMENT_PROPERTY_MUTATOR(Float,RageLevel)         // Float:PD_SetRageLevel
+IMPLEMENT_PROPERTY_MUTATOR(_,JarateRef)             // PD_SetJarateRef
+IMPLEMENT_PROPERTY_MUTATOR(Float,TeleportLevel)     // Float:PD_SetTeleportLevel
+
+// Flag functions.
+
+/// Returns whether the given state flag for the given slot is set.
+/// True if the flag is set, false otherwise.
+stock bool:_PD_IsFlagSet(slot, UserStateFlags:flag)
+{
+    return (_PD_GetStateFlags() & _:flag) == _:flag;
+}
+
+/// Sets the value of the given flag in the given slot.
+stock PD_SetFlag(slot, UserStateFlags:flag, bool:value)
+{
+    // Setting the flag:
+    if ( value )
+    {
+        PlayerDataArray[slot][StateFlags] |= _:flag;
+    }
+    
+    // Clearing the flag:
+    else
+    {
+        PlayerDataArray[slot][StateFlags] &= ~(_:flag);
+    }
+}
+
+/// Toggles the value of the given flag in the given slot.
+stock PD_ToggleFlag(slot, UserStateFlags:flag)
+{
+    PlayerDataArray[slot][StateFlags] ^= _:flag;
+}
+
+// Convenience functions for adding clients by their indices rather than user IDs.
+
+/// Adds the given client to the arrays and returns their slot. Properties are set to their default values.
+/// Throws an error if no array slots are left, or if the client is invalid.
+stock PD_RegisterClient(client)
+{
+    new userid = GetClientUserId(client);
+    if ( userid < 1 ) ThrowError("Client %d is not valid.", client);
+    
+    return PD_AddUserId(userid);
+}
+
+/// Removes the given client from the arrays.
+/// Throws an error if the client is invalid.
+stock PD_UnregisterClient(client)
+{
+    new userid = GetClientUserId(client);
+    if ( userid < 1 ) ThrowError("Client %d is not valid.", client);
+    
+    PD_RemoveUserId(userid);
+}
+
+/// Returns the slot index for the given client, or -1 if the client is not registered.
+/// Throws an error if the client is invalid. If the throwError parameter is true,
+/// also throws an error if the client is not present in the arrays (instead of the
+/// function returning -1).
+stock _PD_GetClientSlot(client, bool:throwError = true)
+{
+    new userid = GetClientUserId(client);
+    if ( userid < 1 ) ThrowError("Client %d is not valid.", client);
+    
+    new ret =  _PD_SlotForUserId(client);
+    if ( ret < 0 && throwError ) ThrowError("Client %d is not present in the data arrays.", client);    // Fail first!
+    return ret;
+}
+
+/// Returns whether the state flag on the given client is true or false.
+/// Throws an error if the client is invalid or if they do not exist in the arrays.
+stock bool:_PD_IsClientFlagSet(client, UserStateFlags:flag)
+{
+    return _PD_IsFlagSet(_PD_GetClientSlot(client), flag);
+}
+
+/// Sets the value of the given client's flag.
+/// Throws an error if the client is invalid or if they do not exist in the arrays.
+stock PD_SetClientFlag(client, UserStateFlags:flag)
+{
+    PD_SetFlag(_PD_GetClientSlot(client), flag);
+}
+
+/// Toggles the value of the given client's flag.
+/// Throws an error if the client is invalid or if they do not exist in the arrays.
+stock PD_ToggleClientFlag(client, UserStateFlag:flag)
+{
+    PD_ToggleFlag(_PD_GetClientSlot(client), flag);
+}
+
+/// Returns the number of slots currently in use.
+stock _PD_SlotCount()
+{
+    return NumOccupiedSlots;
+}
+
+/// Returns the maximum number of players supported.
+stock _PD_TotalSlots()
+{
+    return TOTAL_SLOTS;
+}
+
+/// Returns the total number of properties.
+stock _PD_TotalProperties()
+{
+    return TOTAL_PROPERTIES;
+}
+
+/// Returns the total number of flags.
+stock _PD_TotalFlags()
+{
+    return TOTAL_FLAGS;
+}
+
+/// Returns whether the arrays are currently empty.
+stock _PD_IsEmpty()
+{
+    return (_PD_SlotCount() < 1);
+}
+
+/// Returns whether the arrays are currently full.
+stock _PD_IsFull()
+{
+    return (_PD_SlotCount() >= _PD_TotalSlots());
+}
+
+/// Resets all the array indices to their default values.
+/// Updates NumOccupiedSlots.
+stock PD_Reset()
+{
+    // Check that the flags are correct.
+    assert FLAG_SANITY_CHECK;
+    
+    for ( new i = 0; i < _PD_TotalSlots(); i++ )
+    {
+        PD_ResetToDefault(i);
+    }
+    
+    NumOccupiedSlots = 0;
+}
+
+/// Resets the given player data slot to default values.
+/// Throws an error if the slot is invalid.
+stock PD_ResetToDefault(slot)
+{
+    for ( new i = 0; i < _PD_TotalProperties(); i++ )
+    {
+        PlayerDataArray[slot][i] = ValueDefaults[i];
+    }
+}
+
+// Raw functions.
+
+/// Finds the first free slot in the array.
+/// Returns the slot index, or -1 if there are no free slots.
+static stock _PD_FindFreeSlot()
+{
+    for ( new i = 0; i < _PD_TotalSlots(); i++ )
+    {
+        if ( !_PD_IsSlotOccupied(i) ) return i;
+    }
+    
+    return -1;
+}
+
+/// Adds a user ID to the list and sets all properties to their default value.
+/// Returns the index at which the user ID was added, or throws an error if there were not enough slots left.
+/// Updates NumOccupiedSlots.
+static stock PD_AddUserId(userid)
+{
+    assert FLAG_SANITY_CHECK;
+
+    new slot = _PD_FindFreeSlot();
+    if ( slot < 0 ) ThrowError("No free player data slots available to store user ID %d.", userid);
+    
+    // Clear previous properties.
+    PD_ResetToDefault(slot);
+    
+    // Add the user ID and return the slot.
+    PlayerDataArray[slot][UserId] = userid;
+    NumOccupiedSlots++;
+    return slot;
+}
+
+/// Returns the first slot number for the given user ID, or -1 if the ID is not found.
+static stock _PD_SlotForUserId(userid)
+{
+    for ( new i = 0; i < _PD_TotalSlots(); i++ )
+    {
+        if ( PlayerDataArray[i][UserId] == userid ) return i;
+    }
+    
+    return -1;
+}
+
+/// Removes the first instance of the given user ID.
+/// Any properties that were associated with the user ID are left as they are.
+/// Updates NumOccupiedSlots.
+static stock PD_RemoveUserId(userid)
+{
+    new slot = _PD_SlotForUserId(userid);
+    if ( slot < 0 ) return;
+    
+    PlayerDataArray[slot][UserId] = INVALID_USERID;
+    NumOccupiedSlots--;
+}
+
+/// Returns whether a given user ID is present in the array.
+/// Returns true if so, false otherwise.
+static stock bool:_PD_IsUserIdPresent(userid)
+{
+    return (_PD_SlotForUserId(userid) >= 0);
+}
+
+/// Returns whether a valid user ID is present in the given slot.
+/// Returns true if so, false otherwise.
+static stock bool:_PD_IsSlotOccupied(slot)
+{
+    return (PlayerDataArray[i][UserId] != INVALID_USERID);
+}
+
+// Undef the defines - it's safer to provide accessor functions.
+#undef TOTAL_PROPERTIES
+#undef TOTAL_SLOTS
+#undef TOTAL_FLAGS
+#undef FLAG_SANITY_CHECK
