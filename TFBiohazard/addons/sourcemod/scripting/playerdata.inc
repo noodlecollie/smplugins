@@ -15,6 +15,9 @@
 // To add a new state flag:
 // 1. Add a new entry to the UserStateFlags enum.
 
+// Define this for checking pre-/post-conditions of functions.
+#define PD_DEBUG
+
 #define TOTAL_SLOTS     MAXPLAYERS  // Total number of slots available for player data.
 #define INVALID_USERID  0           // Invalid user ID.
 
@@ -63,23 +66,31 @@ static NumOccupiedSlots = 0;                        // Number of slots that are 
 
 // Accessors for properties.
 #define IMPLEMENT_PROPERTY_ACCESSOR(%0,%1) stock %0:_PD_Get%1(slot) { return PlayerDataArray[slot][%1]; }
-IMPLEMENT_PROPERTY_ACCESSOR(_,UserId)               // _PD_GetUserId
-IMPLEMENT_PROPERTY_ACCESSOR(_,StateFlags)           // _PD_GetStateFlags
-IMPLEMENT_PROPERTY_ACCESSOR(_,CurrentHealth)        // _PD_GetCurrentHealth
-IMPLEMENT_PROPERTY_ACCESSOR(_,MaxHealth)            // _PD_GetMaxHealth
-IMPLEMENT_PROPERTY_ACCESSOR(Float,RageLevel)        // Float:_PD_GetRageLevel
-IMPLEMENT_PROPERTY_ACCESSOR(_,JarateRef)            // _PD_GetJarateRef
-IMPLEMENT_PROPERTY_ACCESSOR(Float,TeleportLevel)    // Float:_PD_GetTeleportLevel
+IMPLEMENT_PROPERTY_ACCESSOR(_,UserId)               // _PD_GetUserId(slot)
+IMPLEMENT_PROPERTY_ACCESSOR(_,StateFlags)           // _PD_GetStateFlags(slot)
+IMPLEMENT_PROPERTY_ACCESSOR(_,CurrentHealth)        // _PD_GetCurrentHealth(slot)
+IMPLEMENT_PROPERTY_ACCESSOR(_,MaxHealth)            // _PD_GetMaxHealth(slot)
+IMPLEMENT_PROPERTY_ACCESSOR(Float,RageLevel)        // Float:_PD_GetRageLevel(slot)
+IMPLEMENT_PROPERTY_ACCESSOR(_,JarateRef)            // _PD_GetJarateRef(slot)
+IMPLEMENT_PROPERTY_ACCESSOR(Float,TeleportLevel)    // Float:_PD_GetTeleportLevel(slot)
 
 // Mutators for properties.
 #define IMPLEMENT_PROPERTY_MUTATOR(%0,%1) stock PD_Set%1(slot, %0:value) { PlayerDataArray[slot][%1] = value; }
-IMPLEMENT_PROPERTY_MUTATOR(_,UserId)                // PD_SetUserId
-IMPLEMENT_PROPERTY_MUTATOR(_,StateFlags)            // PD_SetStateFlags
-IMPLEMENT_PROPERTY_MUTATOR(_,CurrentHealth)         // PD_SetCurrentHealth
-IMPLEMENT_PROPERTY_MUTATOR(_,MaxHealth)             // PD_SetMaxHealth
-IMPLEMENT_PROPERTY_MUTATOR(Float,RageLevel)         // Float:PD_SetRageLevel
-IMPLEMENT_PROPERTY_MUTATOR(_,JarateRef)             // PD_SetJarateRef
-IMPLEMENT_PROPERTY_MUTATOR(Float,TeleportLevel)     // Float:PD_SetTeleportLevel
+IMPLEMENT_PROPERTY_MUTATOR(_,UserId)                // PD_SetUserId(slot, value)
+IMPLEMENT_PROPERTY_MUTATOR(_,StateFlags)            // PD_SetStateFlags(slot, value)
+IMPLEMENT_PROPERTY_MUTATOR(_,CurrentHealth)         // PD_SetCurrentHealth(slot, value)
+IMPLEMENT_PROPERTY_MUTATOR(_,MaxHealth)             // PD_SetMaxHealth(slot, value)
+IMPLEMENT_PROPERTY_MUTATOR(Float,RageLevel)         // PD_SetRageLevel(slot, Float:value)
+IMPLEMENT_PROPERTY_MUTATOR(_,JarateRef)             // PD_SetJarateRef(slot, value)
+IMPLEMENT_PROPERTY_MUTATOR(Float,TeleportLevel)     // PD_SetTeleportLevel(slot, Float:value)
+
+// Convenience functions.
+#define IMPLEMENT_PROPERTY_INCREMENTER(%0,%1) PD_Increment%1(slot, %0:value) { PD_Set%1(slot, _PD_Get%1(slot) + value); }
+#define IMPLEMENT_PROPERTY_DECREMENTER(%0,%1) PD_Decrement%1(slot, %0:value) { PD_Set%1(slot, _PD_Get%1(slot) - value); }
+IMPLEMENT_PROPERTY_INCREMENTER(Float,RageLevel)     // PD_IncrementRageLevel(slot, Float:value)
+IMPLEMENT_PROPERTY_DECREMENTER(Float,RageLevel)     // PD_DecrementRageLevel(slot, Float:value)
+IMPLEMENT_PROPERTY_INCREMENTER(Float,TeleportLevel) // PD_IncrementTeleportLevel(slot, Float:value)
+IMPLEMENT_PROPERTY_DECREMENTER(Float,TeleportLevel) // PD_DecrementTeleportLevel(slot, Float:value)
 
 // Flag functions.
 
@@ -118,20 +129,42 @@ stock PD_ToggleFlag(slot, UserStateFlags:flag)
 /// Throws an error if no array slots are left, or if the client is invalid.
 stock PD_RegisterClient(client)
 {
+#ifdef PD_DEBUG
+    assert NumOccupiedSlots >= 0;
+    new prevOccupied = NumOccupiedSlots;
+#endif
+
     new userid = GetClientUserId(client);
     if ( userid < 1 ) ThrowError("Client %d is not valid.", client);
     
+#ifndef PD_DEBUG
     return PD_AddUserId(userid);
+#else
+    new ret = PD_AddUserId(userid);
+    assert NumOccupiedSlots == prevOccupied + 1;
+    return ret;
+#endif
 }
 
 /// Removes the given client from the arrays.
 /// Throws an error if the client is invalid.
 stock PD_UnregisterClient(client)
 {
+#ifdef PD_DEBUG
+    assert NumOccupiedSlots >= 0;
+    new prevOccupied = NumOccupiedSlots;
+    new bool:clientExists = _PD_IsUserIdPresent(GetClientUserId(client));
+#endif
+
     new userid = GetClientUserId(client);
     if ( userid < 1 ) ThrowError("Client %d is not valid.", client);
     
     PD_RemoveUserId(userid);
+    
+#ifdef PD_DEBUG
+    if ( clientExists ) assert NumOccupiedSlots == prevOccupied - 1;
+    else assert NumOccupiedSlots == prevOccupied;
+#endif
 }
 
 /// Returns the slot index for the given client, or -1 if the client is not registered.
@@ -140,13 +173,26 @@ stock PD_UnregisterClient(client)
 /// function returning -1).
 stock _PD_GetClientSlot(client, bool:throwError = true)
 {
+#ifdef PD_DEBUG
+    assert NumOccupiedSlots >= 0;
+    new prevOccupied = NumOccupiedSlots;
+#endif
+
     new userid = GetClientUserId(client);
     if ( userid < 1 ) ThrowError("Client %d is not valid.", client);
     
     new ret =  _PD_SlotForUserId(client);
     if ( ret < 0 && throwError ) ThrowError("Client %d is not present in the data arrays.", client);    // Fail first!
+    
+#ifdef PD_DEBUG
+    assert NumOccupiedSlots == prevOccupied;
+#endif
+
     return ret;
 }
+
+// If lots of flag setting is going on, it's recommended to cache the value from _PD_GetClientSlot()
+// and then use _PD_SetFlag() etc. in order to avoid re-calculating the client slot each time.
 
 /// Returns whether the state flag on the given client is true or false.
 /// Throws an error if the client is invalid or if they do not exist in the arrays.
@@ -157,9 +203,9 @@ stock bool:_PD_IsClientFlagSet(client, UserStateFlags:flag)
 
 /// Sets the value of the given client's flag.
 /// Throws an error if the client is invalid or if they do not exist in the arrays.
-stock PD_SetClientFlag(client, UserStateFlags:flag)
+stock PD_SetClientFlag(client, UserStateFlags:flag, bool:value)
 {
-    PD_SetFlag(_PD_GetClientSlot(client), flag);
+    PD_SetFlag(_PD_GetClientSlot(client), flag, value);
 }
 
 /// Toggles the value of the given client's flag.
@@ -206,27 +252,85 @@ stock _PD_IsFull()
 }
 
 /// Resets all the array indices to their default values.
-/// Updates NumOccupiedSlots.
-stock PD_Reset()
+/// If userids is true, also resets user IDs.
+/// Updates NumOccupiedSlots if userids is true.
+stock PD_Reset(bool:userids = false)
 {
+#ifdef PD_DEBUG
+    assert NumOccupiedSlots >= 0;
+    new prevOccupied = NumOccupiedSlots;
+#endif
+
     // Check that the flags are correct.
     assert FLAG_SANITY_CHECK;
-    
     for ( new i = 0; i < _PD_TotalSlots(); i++ )
     {
-        PD_ResetToDefault(i);
+        PD_ResetToDefault(i, userids);
     }
     
-    NumOccupiedSlots = 0;
+    if ( userids ) NumOccupiedSlots = 0;
+    
+#ifdef PD_DEBUG
+    if ( userids ) assert NumOccupiedSlots == 0;
+    else assert NumOccupiedSlots == prevOccupied;
+#endif
 }
 
 /// Resets the given player data slot to default values.
+/// If userids is true, also resets the user ID.
 /// Throws an error if the slot is invalid.
-stock PD_ResetToDefault(slot)
+/// Modifies NumOccupiedSlots if userids is true.
+stock PD_ResetToDefault(slot, bool:userids = false)
 {
-    for ( new i = 0; i < _PD_TotalProperties(); i++ )
+#ifdef PD_DEBUG
+    assert NumOccupiedSlots >= 0;
+    new prevOccupied = NumOccupiedSlots;
+#endif
+
+    new start = userids ? 0 : 1;
+    for ( new i = start; i < _PD_TotalProperties(); i++ )
     {
-        PlayerDataArray[slot][i] = ValueDefaults[i];
+        PD_ResetPropertyToDefault(slot, i);
+    }
+    
+    if ( userids ) NumOccupiedSlots--;
+    
+#ifdef PD_DEBUG
+    if ( userids ) assert NumOccupiedSlots == prevOccupied - 1;
+    else assert NumOccupiedSlots == prevOccupied;
+#endif
+}
+
+/// Resets the given property to its default value.
+/// Throws an error if the slot or property is invalid.
+stock PD_ResetPropertyToDefault(slot, PlayerData:property)
+{
+    PlayerDataArray[slot][property] = _PD_DefaultPropertyValue(property);
+}
+
+/// Resets the given property on all slots to its default value.
+/// Throws an errir if the property is invalid.
+stock PD_ResetPropertyOnAll(PlayerData:property)
+{
+    for ( int i = 0; i < _PD_TotalSlots(); i++ )
+    {
+        PD_ResetPropertyToDefault(i, property);
+    }
+}
+
+/// Returns the default value for a given property.
+/// Throws an error if the property is invalid.
+stock _PD_DefaultPropertyValue(PlayerData:property)
+{
+    return ValueDefaults(property);
+}
+
+/// Sets the given flag on all slots.
+stock PD_SetFlagOnAll(UserStateFlags:flag, bool:value)
+{
+    for ( int i = 0; i < _PD_TotalSlots(); i++ )
+    {
+        PD_SetFlag(i, flag, value);
     }
 }
 
@@ -255,7 +359,7 @@ static stock PD_AddUserId(userid)
     if ( slot < 0 ) ThrowError("No free player data slots available to store user ID %d.", userid);
     
     // Clear previous properties.
-    PD_ResetToDefault(slot);
+    PD_ResetToDefault(slot, true);
     
     // Add the user ID and return the slot.
     PlayerDataArray[slot][UserId] = userid;

@@ -17,6 +17,8 @@
 #include <dhooks>
 #include <tf2items>
 
+#include "playerdata"
+
 #pragma semicolon 1
 
 #define DEVELOPER       0
@@ -100,10 +102,6 @@
 
 #define STANDARD_GREEN      148, 197, 143, 255
 
-// Player state flags
-#define FLAG_NONE           0
-#define FLAG_UBER_READY     (1 << 0)    // Player has Ubercharge ready. 1
-
 // Weapon attribute strings
 new const String:defWrench[]        = "292 ; 3.0 ; 293 ; 0.0 ; 287 ; 2.0";
 new const String:defGoldenWrench[]  = "150 ; 1.0 ; 153 ; 1.0 ; 287 ; 2.0";
@@ -119,21 +117,6 @@ new bool:b_AllowChange; // If true, team changes will not be blocked.
 new bool:b_Setup;       // If true, PluginStart has already run. This avoids double loading from OnMapStart when plugin is loaded during a game.
 new g_GameRules = -1;   // Index of a tf_gamerules entity.
 new g_NextJarate = 0;   // If this is set, the next Jarate projectile to be created will have its owner set to the player of this user ID.
-
-// Player data
-new g_userIDMap[MAXPLAYERS];                    // For a userID at index n, this player's data will be found in index n of the rest of the data arrays.
-                                                // If index n < 1, index n in data arrays is free for use.
-new bool:g_Zombie[MAXPLAYERS] = {true, ...};    // True if the player is infected, false otherwise. Should start true so that Blue is the team new players join into.
-new g_Health[MAXPLAYERS];                       // Records a client's health. Only taken into account if they are flagged as a zombie.
-new g_MaxHealth[MAXPLAYERS];                    // Records a client's max health before it is changed.
-new bool:g_StartBoost[MAXPLAYERS];              // If true, player has begun the round as a zombie and should receive crits/speed boost until the end of the round.
-new Float:g_Rage[MAXPLAYERS];                   // Counter for zombie rage.
-new bool:g_Raging[MAXPLAYERS];                  // True if zombie is currently in rage state.
-new bool:g_HasSuperJumped[MAXPLAYERS];          // True if the player has super-jumped and not yet landed.
-new bool:g_PrevJumpState[MAXPLAYERS];           // Records the state of the jump button on the previous frame.
-new g_Jarate[MAXPLAYERS] = {-1, ...};           // Holds entity refs to thrown Jarate jars.
-new g_UtilFlags[MAXPLAYERS];                    // Various other player state flags (should have used this method from the start, but oh well)
-new Float:g_TeleportLevel[MAXPLAYERS];          // Holds the teleport level. Only relevant if player is a zombie Engineer.
 
 // ConVars
 new Handle:cv_PluginEnabled = INVALID_HANDLE;       // Enables or disables the plugin.
@@ -531,6 +514,10 @@ public OnPluginStart()
     LogMessage("DEVELOPER flag set! Reset this before release!");
     #endif
     
+    #ifdef PD_DEBUG
+    LogMessage("Player data array debugging is compiled in - probably need to turn this off before release.");
+    #endif
+    
     // If we're not enabled, don't set anything up.
     if ( g_PluginState & STATE_DISABLED == STATE_DISABLED )
     {
@@ -725,7 +712,7 @@ public Event_RoundStart(Handle:event, const String:name[], bool:dontBroadcast)
             if ( IsClientInGame(i) && GetClientTeam(i) == TEAM_BLUE )    // If the player is on Blue:
             {
                 if ( cvDebug & DEBUG_TEAMCHANGE == DEBUG_TEAMCHANGE ) LogMessage("Cleared zombie flag for client %N.", i);
-                g_Zombie[DataIndexForUserId(GetClientUserId(i))] = false;    // Mark the player as not being a zombie.
+                PD_SetClientFlag(i, UsrZombie, false);  // Mark the player as not being a zombie.
                 
                 if ( cvDebug & DEBUG_TEAMCHANGE == DEBUG_TEAMCHANGE ) LogMessage("Changing %N to Red.", i);
                 ChangeClientTeam(i, TEAM_RED);                                  // Change the player to Red.
@@ -803,7 +790,7 @@ public Event_SetupFinished(Handle:event, const String:name[], bool:dontBroadcast
             {
                 ChangeClientTeam(i, TEAM_RED);
                 TF2_RespawnPlayer(i);    
-                g_Zombie[DataIndexForUserId(GetClientUserId(i))] = false;
+                PD_SetClientFlag(i, UsrZombie, false);
 
             }
             
@@ -894,7 +881,8 @@ public Event_SetupFinished(Handle:event, const String:name[], bool:dontBroadcast
         if ( cvDebug & DEBUG_TEAMCHANGE == DEBUG_TEAMCHANGE ) LogMessage("Client %N chosen to be zombified.", players[i]);
         
         MakeClientZombie2(players[i]);                                            // Make the client into a zombie.
-        g_StartBoost[DataIndexForUserId(GetClientUserId(players[i]))] = true;    // Mark them as being roundstart boosted.
+        //g_StartBoost[DataIndexForUserId(GetClientUserId(players[i]))] = true;    // Mark them as being roundstart boosted.
+        PD_SetClientFlag(i, UsrStartBoost, true);
     }
 }
 
@@ -1134,14 +1122,14 @@ public Action:TeamChange(client, const String:command[], argc)
     else    // The first zombie has been chosen.
     {
         // Disallow players joining Red if they are marked as a zombie.
-        if ( (StrContains(arg, "red", false) != -1 || StrContains(arg, "auto", false) != -1) && g_Zombie[DataIndexForUserId(GetClientUserId(client))] )
+        if ( (StrContains(arg, "red", false) != -1 || StrContains(arg, "auto", false) != -1) && _PD_IsClientFlagSet(client, UsrZombie) )
         {
             if ( cvDebug & DEBUG_TEAMCHANGE == DEBUG_TEAMCHANGE ) LogMessage("Arg contains red or auto, overriding to blue.");
             FakeClientCommandEx(client, "jointeam blue");    // Ex is delayed by 1 frame
             return Plugin_Handled;
         }
         // Disallow players joining Blue if they are not marked as a zombie,
-        else if ( (StrContains(arg, "blue", false) != -1 || StrContains(arg, "auto", false) != -1) && !g_Zombie[DataIndexForUserId(GetClientUserId(client))] )
+        else if ( (StrContains(arg, "blue", false) != -1 || StrContains(arg, "auto", false) != -1) && !_PD_IsClientFlagSet(client, UsrZombie) )
         {
             if ( cvDebug & DEBUG_TEAMCHANGE == DEBUG_TEAMCHANGE ) LogMessage("Arg contains blue or auto, overriding to red.");
             FakeClientCommandEx(client, "jointeam red");    // Ex is delayed by 1 frame
@@ -1160,18 +1148,18 @@ public Action:DoTaunt(client, const String:command[], argc)
     
     if ( !IsClientInGame(client) || GetClientTeam(client) != TEAM_BLUE || !IsPlayerAlive(client) || TF2_IsPlayerInCondition(client, TFCond_Cloaked) || TF2_IsPlayerInCondition(client, TFCond_DeadRingered) ) return Plugin_Continue;
     
-        // Check to see if the client is a zombie with full rage.
-    new index = DataIndexForUserId(GetClientUserId(client));
-    if ( !g_Zombie[index] || (g_Rage[index] < 100.0 && g_TeleportLevel[index] < 100.0) || g_Raging[client] ) return Plugin_Continue;
+    // Check to see if the client is a zombie with full rage.
+    new slot = _PD_GetClientSlot(client);
+    if ( !_PD_IsFlagSet(slot, UsrZombie) || (_PD_GetRageLevel(slot) < 100.0 && _PD_GetTeleportLevel(slot) < 100.0) || _PD_IsFlagSet(slot, UsrRaging) ) return Plugin_Continue;
         
         // If we should teleport, do this first.
-        if ( g_TeleportLevel[index] >= 100.0 )
+        if ( _PD_GetTeleportLevel(slot) >= 100.0 )
         {
             ActivateTeleport(client);
         }
         
         // Then activate rage.
-        if ( g_Rage[index] >= 100.0 )
+        if ( _PD_GetRageLevel(slot) >= 100.0 )
         {
             ActivateRage(client);
         }
@@ -1204,16 +1192,14 @@ stock ActivateTeleport(client)
     TeleportEntity(client, origin, NULL_VECTOR, NULL_VECTOR);
     
     // Set our teleport charge to zero.
-    g_TeleportLevel[DataIndexForUserId(GetClientUserId(client))] = 0.0;
+    PD_SetTeleportLevel(_PD_GetClientSlot(client), 0.0);
 }
 
 /* Moved from DoTaunt: activate the client's rage. This assumes client is valid and has full rage. */
 stock ActivateRage(client)
 {
-    new index = DataIndexForUserId(GetClientUserId(client));
-    
     // Rage should be activated. Set the raging flag (decrease of rage meter is handled elsewhere).
-    g_Raging[index] = true;
+    PD_SetClientFlag(client, UsrRaging, true);
     
     // Hoping this method will work: un-disguise if we are a Spy.
     TF2_RemoveCondition(client, TFCond_Disguising);
@@ -1223,13 +1209,6 @@ stock ActivateRage(client)
     // NOTE: I have strange vague nightmares that TF2_IgnitePlayer used to crash the game - keep an eye on this!
     new bool:shouldIgnite = false;
     if ( TF2_GetPlayerClass(client) == TFClass_Pyro ) shouldIgnite = true;
-    /*{
-            new weapon = GetPlayerWeaponSlot(client, SLOT_MELEE);
-            if ( weapon != -1 )
-            {
-                    if ( GetEntProp(weapon, Prop_Send, "m_iItemDefinitionIndex") == 38 ) shouldIgnite = true;    // 38 = Axtinguisher
-            }
-    }*/
     
     // Stun any players within the specified radius.
     new Float:cOrigin[3];
@@ -1283,13 +1262,13 @@ public Action:Event_Deflect(Handle:event, const String:name[], bool:dontBroadcas
     new ownerid = GetEventInt(event, "ownerid");
     new owner = GetClientOfUserId(ownerid);
     new weaponid = GetEventInt(event, "weaponid");
-    new index = DataIndexForUserId(ownerid);
+    new slot = _PD_GetClientSlot(client);
     
-    if ( GetClientTeam(owner) != TEAM_BLUE || !g_Zombie[index] || weaponid != 0 ) return Plugin_Continue;
+    if ( GetClientTeam(owner) != TEAM_BLUE || !_PD_IsFlagSet(slot, UsrZombie) || weaponid != 0 ) return Plugin_Continue;
     
     // Add rage to the zombie who was pushed.
-    g_Rage[index] += 3.0;
-    if ( g_Rage[index] > 100.0 ) g_Rage[index] = 100.0;
+    PD_IncrementRageLevel(slot, 3.0)
+    if ( _PD_GetRageLevel(slot) > 100.0 ) PD_SetRageLevel(slot, Float:value) = 100.0;
     
     return Plugin_Continue;
 }
@@ -1301,14 +1280,11 @@ public OnClientConnected(client)
     if ( IsClientReplay(client) || IsClientSourceTV(client) ) return;
     
     // Give the client a slot in the data arrays.
-    new index = FindFreeDataIndex();
-    if ( index < 0 )
+    new slot = PD_RegisterClient(client);
+    if ( slot < 0 )
     {
         SetFailState("Cannot find a free data index for client %N (MaxClients %d, MAXPLAYERS %d).", client, MaxClients, MAXPLAYERS);
     }
-    
-    g_userIDMap[index] = GetClientUserId(client);    // Register the client's userID.
-    ClearAllArrayDataForIndex(index);                // Clear all the other data arrays at the specified index.
 }
 
 public Action:Event_Inventory(Handle:event, const String:name[], bool:dontBroadcast)
@@ -1321,8 +1297,7 @@ public Action:Event_Inventory(Handle:event, const String:name[], bool:dontBroadc
     
     if ( GetClientTeam(client) == TEAM_BLUE )
     {
-        new index = DataIndexForUserId(userid);
-        if ( g_Zombie[index] )
+        if ( _PD_IsClientFlagSet(client, UsrZombie) )
         {
             // Validate weapons.
             ManageZombieWeapons(client);
@@ -1345,7 +1320,7 @@ public OnClientDisconnect(client)
     if ( IsClientReplay(client) || IsClientSourceTV(client) ) return;
     
     // Clear the client's data arrays.
-    ClearAllDataForPlayer(GetClientUserId(client));
+    PD_UnregisterClient(client)
     
     if ( g_PluginState & STATE_DISABLED == STATE_DISABLED ) return;
     
@@ -1365,93 +1340,6 @@ public OnClientPutInServer(client)
     
     DHookEntity(hDamageHook, false, client); 
 }
-
-/*    Called when a hooked client takes damage.
-    Note that due to TF2's damage spread, code here will soon be moved to OnTakeDamage_Alive.    */
-/*
-public Action:OnTakeDamage(client, &attacker, &inflictor, &Float:damage, &damagetype, &weapon, Float:damageForce[3], Float:damagePosition[3])
-{
-    // Don't bother checking damage values if we're not in a valid round.
-    if ( g_PluginState & STATE_DISABLED == STATE_DISABLED ||
-            g_PluginState & STATE_NOT_IN_ROUND == STATE_NOT_IN_ROUND ||
-            g_PluginState & STATE_FEW_PLAYERS == STATE_FEW_PLAYERS ) return Plugin_Continue;
-    
-    new userid = GetClientUserId(client);
-    new index = DataIndexForUserId(userid);
-    new cvDebug = GetConVarInt(cv_Debug);
-    
-    // If the player is on Red and not a zombie, the attacker is on Blue and is a zombie and the damage will kill the player, convert Red player to zombie.
-    // This jumps in before the player actually dies, since it's nigh impossible to respawn the player instantly in the
-    // same place using the death hook.
-    
-    // #BUG#: Sometimes this hook returns the damage dealt as less than the client's health, yet the client still dies.
-    // This could be due to a damage flag I'm not checking for (I hope), or the damage/health values are inaccurate (bad).
-    
-    //if ( cvDebug & DEBUG_ZOMBIFY == DEBUG_ZOMBIFY ) LogMessage("Team %d, damage %f, health %d, attacker %d, attacker team %d, g_Zombie %d", GetClientTeam(client), damage, GetEntProp(client, Prop_Send, "m_iHealth"), attacker, GetClientTeam(attacker), g_Zombie[DataIndexForUserId(GetClientUserId(attacker))]);
-    
-    if ( GetClientTeam(client) == TEAM_RED && attacker > 0 && attacker <= MaxClients && GetClientTeam(attacker) == TEAM_BLUE && g_Zombie[DataIndexForUserId(GetClientUserId(attacker))] )    // Must use the player health property here, since g_Health doesn't update until the post hook.
-    {
-        // Apparently damage contains only the base damage, meaning if the attack was a crit/mini-crit and would kill the player
-        // the damage value wouldn't necessarily be greater than the player's health in this hook, and so the player would die normally.
-        // We need to check whether the attack is a crit/mini-crit and if so, check the correct multiple of the damage dealt.
-        
-        if ( cvDebug & DEBUG_ZOMBIFY == DEBUG_ZOMBIFY )
-        {
-            LogMessage("Client %N hurt by zombie %N", client, attacker);
-            
-            if ( damagetype & DMG_CRIT == DMG_CRIT )
-            {
-                LogMessage("Damage CRIT, damage %f, x3 = %f, health %f", damage, damage * 3.0, float(GetEntProp(client, Prop_Send, "m_iHealth")));
-            }
-            // NOTE
-            else if ( damagetype & DMG_ACID == DMG_ACID )
-            {
-                LogMessage("Damage ACID (mini-crit), damage %f, x1.35 = %f, health %f", damage, damage * 1.35, float(GetEntProp(client, Prop_Send, "m_iHealth")));
-            }
-            else
-            {
-                LogMessage("Damage normal, damage %f, type %d health %f", damage, damagetype, float(GetEntProp(client, Prop_Send, "m_iHealth")));
-            }
-        }
-        
-        if ( damage >= float(GetEntProp(client, Prop_Send, "m_iHealth")) || (damagetype & DMG_CRIT == DMG_CRIT && damage * 3.0 >= float(GetEntProp(client, Prop_Send, "m_iHealth"))) || (damagetype & DMG_ACID == DMG_ACID && damage * 1.35 >= float(GetEntProp(client, Prop_Send, "m_iHealth"))) )
-        {
-            if ( cvDebug & DEBUG_ZOMBIFY == DEBUG_ZOMBIFY ) LogMessage("Client %N killed by zombie %N", client, attacker);
-            damage = 0.0;                                                            // Negate the damage.
-            MakeClientZombie2(client);                                                // Make the client a zombie.
-            BuildZombieMessage(client, attacker, inflictor, damagetype, weapon);    // Build and fire the death message.
-            return Plugin_Changed;
-        }
-        else if ( cvDebug & DEBUG_ZOMBIFY == DEBUG_ZOMBIFY ) LogMessage("Damage not enough to kill player.");
-    }
-    
-    // If the player is on Blue and a zombie, and the attacker is on Red and not a zombie, increase the pushback.
-    else if ( GetClientTeam(client) == TEAM_BLUE && g_Zombie[index] &&
-            attacker > 0 && attacker <= MaxClients && IsClientInGame(attacker) &&
-            GetClientTeam(attacker) == TEAM_RED && !g_Zombie[DataIndexForUserId(GetClientUserId(attacker))] )
-    {
-        new Float:mx;
-        if ( IsValidEntity(inflictor) )
-        {
-            new String:classname[64];
-            GetEntityClassname(inflictor, classname, sizeof(classname));
-            
-            if ( StrEqual(classname, "obj_sentrygun") ) mx = GetConVarFloat(cv_SentryPushback);
-            else mx = GetConVarFloat(cv_Pushback);
-        }
-        else mx = GetConVarFloat(cv_Pushback);
-        
-        damageForce[0] = damageForce[0] * mx;    // This method seems to work better...?
-        damageForce[1] = damageForce[1] * mx;
-        damageForce[2] = damageForce[2] * mx;
-        //ScaleVector(damageForce, GetConVarFloat(cv_Pushback));
-        
-        return Plugin_Changed;
-    }
-    
-    return Plugin_Continue;
-}
-*/
 
 /*    Custom OnTakeDamage_Alive hook - this reports damage after spread has been applied.
     BUG: Fists of Steel modify melee damage taken AFTER this hook (fucking...), meaning
@@ -1483,7 +1371,7 @@ public MRESReturn:OnTakeDamage_Alive(client, Handle:hReturn, Handle:hParams)
     DHookGetParamObjectPtrVarVector(hParams, 1, ofDamagePosition, ObjectValueType_Vector, damagePosition);
     
     new userid = GetClientUserId(client);
-    new index = DataIndexForUserId(userid);
+    new index = _PD_GetClientSlot(client);
     new cvDebug = GetConVarInt(cv_Debug);
     
     // If the player is on Red and not a zombie, the attacker is on Blue and is a zombie and the damage will kill the player, convert Red player to zombie.
@@ -1495,7 +1383,7 @@ public MRESReturn:OnTakeDamage_Alive(client, Handle:hReturn, Handle:hParams)
     new bool:zombify = true;
     
     // If cv_AlwaysZombify is not set, only attacks specifically caused by a Blue zombie player should cause us to zombify.
-    if ( !GetConVarBool(cv_AlwaysZombify) && (attacker <= 0 || attacker > MaxClients || GetClientTeam(attacker) != TEAM_BLUE || !g_Zombie[DataIndexForUserId(GetClientUserId(attacker))]) ) zombify = false;
+    if ( !GetConVarBool(cv_AlwaysZombify) && (attacker <= 0 || attacker > MaxClients || GetClientTeam(attacker) != TEAM_BLUE || !_PD_IsClientFlagSet(attacker, UsrZombie)) ) zombify = false;
     
     // Don't zombify if setup hasn't finished yet.
     else if ( (g_PluginState & STATE_AWAITING) == STATE_AWAITING ) zombify = false;
@@ -1521,8 +1409,8 @@ public MRESReturn:OnTakeDamage_Alive(client, Handle:hReturn, Handle:hParams)
             if ( custom == TF_CUSTOM_BACKSTAB )
             {
                 // Grant full rage if not already raging.
-                new dataindex = DataIndexForUserId(GetClientUserId(attacker));
-                if ( !g_Raging[dataindex] ) g_Rage[dataindex] = 100.0;
+                new dataindex = _PD_GetClientSlot(attacker);
+                if ( !_PD_IsFlagSet(dataindex, UsrRaging) ) PD_SetRageLevel(dataindex, 100.0);
             }
             
             return MRES_ChangedHandled;                                                        // AFAIK ChangedHandled is for changed params, Override is for changed return.
@@ -1531,9 +1419,9 @@ public MRESReturn:OnTakeDamage_Alive(client, Handle:hReturn, Handle:hParams)
     }
     
     // If the player is on Blue and a zombie, and the attacker is on Red and not a zombie:
-    else if ( GetClientTeam(client) == TEAM_BLUE && g_Zombie[index] &&
+    else if ( GetClientTeam(client) == TEAM_BLUE && _PD_IsFlagSet(index, UsrZombie) &&
             attacker > 0 && attacker <= MaxClients && IsClientInGame(attacker) &&
-            GetClientTeam(attacker) == TEAM_RED && !g_Zombie[DataIndexForUserId(GetClientUserId(attacker))] )
+            GetClientTeam(attacker) == TEAM_RED && !_PD_IsClientFlagSet(attacker, UsrZombie) )
     {
         new Float:mx;
         if ( TF2_GetPlayerClass(client) == TFClass_Heavy && GetEntProp(client, Prop_Send, "m_bDucked") == 1 ) mx = 0.0;
@@ -1585,14 +1473,14 @@ public Action:OnTakeDamagePost(client, &attacker, &inflictor, &Float:damage, &da
             g_PluginState & STATE_FEW_PLAYERS == STATE_FEW_PLAYERS ) return Plugin_Continue;
     
     new userid = GetClientUserId(client);
-    new index = DataIndexForUserId(userid);
+    new index = _PD_GetClientSlot(client);
     
     if ( GetConVarInt(cv_Debug) & DEBUG_ZOMBIFY == DEBUG_ZOMBIFY ) LogMessage("Client %N's health is now %d", client, GetEntProp(client, Prop_Send, "m_iHealth"));
     
     // If a zombie was hurt, update their recorded health.
-    if ( GetClientTeam(client) == TEAM_BLUE && g_Zombie[index] )
+    if ( GetClientTeam(client) == TEAM_BLUE && _PD_IsFlagSet(index, UsrZombie) )
     {
-        g_Health[index] = GetEntProp(client, Prop_Send, "m_iHealth");
+        PD_SetCurrentHealth(index, GetEntProp(client, Prop_Send, "m_iHealth"));
     }
 
     return Plugin_Continue;
@@ -1658,18 +1546,18 @@ public Event_PlayerSpawn(Handle:event, const String:name[], bool:dontBroadcast)
     
     new userid = GetEventInt(event, "userid");
     new client = GetClientOfUserId(userid);
-    new index = DataIndexForUserId(userid);
+    new index = _PD_GetClientSlot(client);
     
     // If the player is on Blue and is a zombie:
-    if ( GetClientTeam(client) == TEAM_BLUE && g_Zombie[index] )
+    if ( GetClientTeam(client) == TEAM_BLUE && _PD_IsFlagSet(index, UsrZombie) )
     {
         SetLargeHealth(client);
         
-        g_Rage[index] = 0.0;
-        g_Raging[index] = false;
-        g_HasSuperJumped[index] = false;
-        g_PrevJumpState[index] = false;
-                g_TeleportLevel[index] = 0.0;
+        PD_ResetPropertyToDefault(index, RageLevel);
+        PD_SetFlag(index, UsrRaging, false);
+        PD_SetFlag(index, UsrSuperJump, false);
+        PD_SetFlag(index, UsrJumpPrevFrame, false);
+        PD_ResetPropertyToDefault(index, TeleportLevel);
     }
     else if ( GetClientTeam(client) == TEAM_RED )
     {
@@ -1707,10 +1595,10 @@ public OnEntityCreated(entity, const String:classname[])
     if ( strcmp(classname, "tf_projectile_jar") == 0 )
     {
         new index = -1;
-        if ( g_NextJarate > 0 ) index = DataIndexForUserId(g_NextJarate);
+        if ( g_NextJarate > 0 ) index = _PD_GetClientSlot(GetClientOfUserId(g_NextJarate));
         if ( index > -1 )
         {
-            g_Jarate[index] = EntIndexToEntRef(entity);    // Record this jar.
+            PD_SetJarateRef(index, EntIndexToEntRef(entity));   // Record this jar.
         }
         
         g_NextJarate = 0;
@@ -1783,8 +1671,8 @@ stock OnJarateHit(jar)
     {
         if ( IsClientInGame(i) )
         {
-            new index = DataIndexForUserId(GetClientUserId(i));
-            if ( g_Jarate[index] == EntIndexToEntRef(jar) )
+            new index = _PD_GetClientSlot(i);
+            if ( _PD_GetJarateRef(index) == EntIndexToEntRef(jar) )
             {
                 gindex = index;
                 owner = i;
@@ -1836,7 +1724,7 @@ stock OnJarateHit(jar)
     TE_SendToAll();
     
     // Clear out the index.
-    if ( gindex >= 0 ) g_Jarate[gindex] = -1;
+    if ( gindex >= 0 ) PD_ResetPropertyToDefault(slot, JarateRef);
 }
 
 // Calculates the repulsion vector from the source for an object at the target position dependant on the magnitude, using linear or quadratic falloff.
@@ -1913,13 +1801,13 @@ public Action:OnPlayerRunCmd(client, &buttons, &impulse, Float:vel[3], Float:ang
     // Don't run if the client is not a Blue zombie.
     if ( GetClientTeam(client) != TEAM_BLUE ) return Plugin_Continue;
     
-    new index = DataIndexForUserId(GetClientUserId(client));
-    if ( !g_Zombie[index] ) return Plugin_Continue;
+    new index = _PD_GetClientSlot(client);
+    if ( !_PD_IsFlagSet(index, UsrZombie) ) return Plugin_Continue;
     
     //If the zombie is not on the ground, is pressing jump and has not jumped yet, do super-jump.
-    if ( !g_HasSuperJumped[index] )
+    if ( !_PD_IsFlagSet(index, UsrSuperJump) )
     {
-        if ( GetEntPropEnt(client, Prop_Data, "m_hGroundEntity") < 0 && !g_PrevJumpState[index] && (buttons & IN_JUMP) == IN_JUMP )
+        if ( GetEntPropEnt(client, Prop_Data, "m_hGroundEntity") < 0 && !_PD_IsFlagSet(index, UsrJumpPrevFrame) && (buttons & IN_JUMP) == IN_JUMP )
         {
             new Float:vec[3], Float:velocity[3];
             GetEntPropVector(client, Prop_Data, "m_vecVelocity", velocity);
@@ -1938,7 +1826,7 @@ public Action:OnPlayerRunCmd(client, &buttons, &impulse, Float:vel[3], Float:ang
             
                 // Set jumping flag.
                 SetEntProp(client, Prop_Send, "m_bJumping", 1);
-                g_HasSuperJumped[index] = true;
+                PD_SetFlag(index, UsrSuperJump, true);
             }
             else
             {
@@ -1962,10 +1850,10 @@ public Action:OnPlayerRunCmd(client, &buttons, &impulse, Float:vel[3], Float:ang
     }
     else    // The zombie has super-jumped - keep an eye out for when they next land on the ground.
     {
-        if ( GetEntPropEnt(client, Prop_Data, "m_hGroundEntity") >= 0 ) g_HasSuperJumped[index] = false;
+        if ( GetEntPropEnt(client, Prop_Data, "m_hGroundEntity") >= 0 ) PD_SetFlag(index, UsrSuperJump, false);
     }
     
-    g_PrevJumpState[index] = ((buttons & IN_JUMP) == IN_JUMP);
+    PD_SetFlag(index, UsrJumpPrevFrame, (buttons & IN_JUMP) == IN_JUMP);
     
     return Plugin_Continue;
 }
@@ -2020,20 +1908,22 @@ stock Cleanup(mode)
         {
             if ( g_PluginState & STATE_DISABLED == STATE_DISABLED ) return;
             
-            for ( new i = 0; i < MAXPLAYERS; i++ )
-            {
-                g_Health[i] = 0;
-                g_MaxHealth[i] = 0;
-                g_StartBoost[i] = false;
-                g_Rage[i] = 0.0;
-                                g_TeleportLevel[i] = 0.0;
-                g_Raging[i] = false;
-                g_HasSuperJumped[i] = false;
-                g_PrevJumpState[i] = false;
-                g_Jarate[i] = -1;
-                g_UtilFlags[i] = FLAG_NONE;
-                g_NextJarate = 0;
-            }
+            // for ( new i = 0; i < MAXPLAYERS; i++ )
+            // {
+                // g_Health[i] = 0;
+                // g_MaxHealth[i] = 0;
+                // g_StartBoost[i] = false;
+                // g_Rage[i] = 0.0;
+                // g_TeleportLevel[i] = 0.0;
+                // g_Raging[i] = false;
+                // g_HasSuperJumped[i] = false;
+                // g_PrevJumpState[i] = false;
+                // g_Jarate[i] = -1;
+                // g_UtilFlags[i] = FLAG_NONE;
+            // }
+            
+            PD_Reset();         // Reset sets defaults to all, which is what we want. The default state flag has zombification set.
+            g_NextJarate = 0;
         }
         
         case CLEANUP_FIRSTSTART:
@@ -2103,7 +1993,7 @@ stock Cleanup(mode)
                     if ( cvDebug & DEBUG_DATA == DEBUG_DATA ) LogMessage("Client %N is connected.", i);
                     
                     // Give the client a slot in the data arrays.
-                    new index = FindFreeDataIndex();
+                    new index = PD_RegisterClient(i)
                     if ( index < 0 )
                     {
                         LogError("MAJOR ERROR: Cannot find a free data index for client %N (MaxClients %d, MAXPLAYERS %d).", i, MaxClients, MAXPLAYERS);
@@ -2111,10 +2001,7 @@ stock Cleanup(mode)
                     }
                     
                     if ( cvDebug & DEBUG_DATA == DEBUG_DATA ) LogMessage("Client %N has user ID %d and data index %d.", i, GetClientUserId(i), index);
-                    
-                    g_userIDMap[index] = GetClientUserId(i);                // Register the client's userID.
-                    ClearAllArrayDataForIndex(index);                        // Clear all the other data arrays at the specified index.
-                    //SDKHook(i, SDKHook_OnTakeDamage, OnTakeDamage);            // Hooks when the client takes damage.
+
                     DHookEntity(hDamageHook, false, i); 
                     SDKHook(i, SDKHook_OnTakeDamagePost, OnTakeDamagePost);
                     
@@ -2137,10 +2024,11 @@ stock Cleanup(mode)
             // End the current round in progress.
             RoundWin();
             
-            for ( new i = 0; i < MAXPLAYERS; i++ )
-            {
-                ClearAllArrayDataForIndex(i, true);
-            }
+            // for ( new i = 0; i < MAXPLAYERS; i++ )
+            // {
+                // ClearAllArrayDataForIndex(i, true);
+            // }
+            PD_Reset(true);
             
             if ( timer_ZRefresh != INVALID_HANDLE )
             {
@@ -2164,16 +2052,18 @@ stock Cleanup(mode)
         case CLEANUP_ROUNDSTART:    // Called even if plugin is disabled, so don't put anything important here.
         {
             // Reset all stored health values.
-            for ( new i = 0; i < MAXPLAYERS; i++ )
-            {
-                g_Health[i] = 0;
-                g_MaxHealth[i] = 0;
-                g_Rage[i] = 0.0;
-                                g_TeleportLevel[i] = 0.0;
-                g_Raging[i] = false;
-                g_HasSuperJumped[i] = false;
-                g_PrevJumpState[i] = false;
-            }
+            // for ( new i = 0; i < MAXPLAYERS; i++ )
+            // {
+                // g_Health[i] = 0;
+                // g_MaxHealth[i] = 0;
+                // g_Rage[i] = 0.0;
+                // g_TeleportLevel[i] = 0.0;
+                // g_Raging[i] = false;
+                // g_HasSuperJumped[i] = false;
+                // g_PrevJumpState[i] = false;
+            // }
+            
+            PD_Reset();
         }
         
         case CLEANUP_MAPSTART:
@@ -2204,10 +2094,7 @@ stock Cleanup(mode)
             
             // Reset all data arrays.
             // Is this needed?
-            for ( new i = 0; i < MAXPLAYERS; i++ )
-            {
-                ClearAllArrayDataForIndex(i, true);
-            }
+            PD_Reset(true);
             
             g_GameRules = FindEntityByClassname(-1, "tf_gamerules");
             
@@ -2253,10 +2140,7 @@ stock Cleanup(mode)
         case CLEANUP_MAPEND:
         {
             // Reset all data arrays.
-            for ( new i = 0; i < MAXPLAYERS; i++ )
-            {
-                ClearAllArrayDataForIndex(i, true);
-            }
+            PD_Reset(true);
             
             if ( timer_ZRefresh != INVALID_HANDLE )
             {
@@ -2300,121 +2184,13 @@ stock Cleanup(mode)
     }
 }
 
-/*    Clears the player data arrays for the player with the specified userID and sets them to their default values.    */
-stock ClearAllDataForPlayer(userid)
-{
-    new index = DataIndexForUserId(userid);
-    if ( index == -1 ) return;
-    
-    ClearAllArrayDataForIndex(index, true);
-}
-
-/*    Clears all the global array data at the specified index to default values.
-    if userid is true, also clears the userID array.    */
-stock ClearAllArrayDataForIndex(index, bool:userid = false)
-{
-    if ( index < 0 || index >= MAXPLAYERS )
-    {
-        LogError("Cannot clear player data, index %d invalid.", index);
-        return;
-    }
-    
-    if ( userid )
-    {
-        if ( GetConVarInt(cv_Debug) & DEBUG_DATA == DEBUG_DATA ) LogMessage("UserID for index %d is being reset.", index);
-        g_userIDMap[index] = 0;
-    }
-    
-    g_Zombie[index] = true;
-    g_Health[index] = 0;
-    g_MaxHealth[index] = 0;
-    g_StartBoost[index] = false;
-    g_Rage[index] = 0.0;
-        g_TeleportLevel[index] = 0.0;
-    g_Raging[index] = false;
-    g_HasSuperJumped[index] = false;
-    g_PrevJumpState[index] = false;
-    g_Jarate[index] = -1;
-    g_UtilFlags[index] = FLAG_NONE;
-}
-
-/*    Returns true if there are enough players to play a match.
+/*  Returns true if there are enough players to play a match.
     Own function for convenience.    */
 stock bool:PlayerCountAdequate()
 {
     if ( !IsServerProcessing() ) return false;
     else if ( GetTeamClientCount(TEAM_RED) + GetTeamClientCount(TEAM_BLUE) > 1 ) return true;
     else return false;
-}
-
-/*    Returns the array index to use in the data arrays for a player with a given userID, or -1 on error.    */
-stock DataIndexForUserId(userid)
-{
-    if ( GetClientOfUserId(userid) < 1 )
-    {
-        LogError("UserID %d is invalid!", userid);
-        return -1;
-    }
-    
-    // Look through the userID mapping array and return the index number at which the given userID matches.
-    for ( new i = 0; i < MAXPLAYERS; i++ )
-    {
-        if ( g_userIDMap[i] == userid ) return i;
-    }
-    
-    // If no match, return -1;
-    return -1;
-}
-
-/*    Finds the next free slot in the data arrays. Returns -1 on error.    */
-stock FindFreeDataIndex()
-{
-    for ( new i = 0; i < MAXPLAYERS; i++ )
-    {
-        if ( g_userIDMap[i] < 1 ) return i;
-    }
-    
-    return -1;
-}
-
-/*    Sets up a client as a zombie.
-    NOTE: Deprecated, use MakeClientZombie2.    */
-stock MakeClientZombie(client, bool:death = false)
-{
-    KillBuildings(client, BUILD_SENTRY | BUILD_DISPENSER | BUILD_TELEPORTER);    // Kill the client's buildings (class is checked in function).
-    
-    if ( !death ) SetEntProp(client, Prop_Send, LIFESTATE_PROP, 2);                // Make sure the client won't die when we change their team.
-    ChangeClientTeam(client, TEAM_BLUE);                                        // Change them to Blue.
-    if ( !death ) SetEntProp(client, Prop_Send, LIFESTATE_PROP, 0);                // Reset the lifestate variable.
-    
-    g_Zombie[DataIndexForUserId(GetClientUserId(client))] = true;                // Mark them as a zombie.
-    
-    if ( death )
-    {
-        new Float:clientPos[3], Float:clientAng[3];
-        GetClientAbsAngles(client, clientAng);
-        GetClientAbsOrigin(client, clientPos);
-        
-        new Handle:pack = CreateDataPack();
-        WritePackCell(pack, GetClientUserId(client));
-        WritePackFloat(pack, clientPos[0]);
-        WritePackFloat(pack, clientPos[1]);
-        WritePackFloat(pack, clientPos[2]);
-        WritePackFloat(pack, clientAng[0]);
-        WritePackFloat(pack, clientAng[1]);
-        WritePackFloat(pack, clientAng[2]);
-        CreateTimer(0.0, Timer_RespawnTelePlayer, pack);
-        
-        return;
-    }
-    
-    if ( GetConVarInt(cv_Debug) & DEBUG_HEALTH == DEBUG_HEALTH ) LogMessage("%N's class : %d", client, TF2_GetPlayerClass(client));
-    
-    SetLargeHealth(client);
-    
-    TF2_RemoveWeaponSlot(client, SLOT_PRIMARY);                        // Remove their primary weapon.
-    TF2_RemoveWeaponSlot(client, SLOT_SECONDARY);                    // Remove their secslot weapon.
-    EquipSlot(client, SLOT_MELEE);                                    // Equip melee.
 }
 
 /*    Steps to make a client a zombie:
@@ -2429,27 +2205,27 @@ stock MakeClientZombie2(client)
 {
     KillBuildings(client, BUILD_SENTRY | BUILD_DISPENSER | BUILD_TELEPORTER);    // Kill the client's buildings (class is checked in function).
     
-    new index = DataIndexForUserId(GetClientUserId(client));
+    new index = _PD_GetClientSlot(client);
     
-    TF2_RemoveCondition(client, TFCond_Taunting);        // Zombification while taunting can cause issues.
-    g_Zombie[index] = true;                                // Mark the client as a zombie.
-    g_Rage[index] = 0.0;                                // Reset their rage.
-        g_TeleportLevel[index] = 0.0;                                                   // Reset their teleport level.
-    g_Raging[index] = false;                            // Flag not raging.
-    g_HasSuperJumped[index] = false;                    // Reset jump state.
-    g_PrevJumpState[index] = false;
+    TF2_RemoveCondition(client, TFCond_Taunting);       // Zombification while taunting could cause issues.
+    PD_SetFlag(index, UsrZombie, true);                 // Mark the client as a zombie.
+    PD_SetRageLevel(index, 0.0);                        // Reset their rage.
+    PD_SetTeleportLevel(index, 0.0);                    // Reset their teleport level.
+    PD_SetFlag(index, UsrRaging, false);                // Flag not raging.
+    PD_SetFlag(index, UsrSuperJump, false);             // Reset jump state.
+    PD_SetFlag(index, UsrJumpPrevFrame, false);
     
     new tempstate = GetEntProp(client, Prop_Send, LIFESTATE_PROP);
-    SetEntProp(client, Prop_Send, LIFESTATE_PROP, 2);            // Make sure the client won't die when we change their team.
-    ChangeClientTeam(client, TEAM_BLUE);                        // Change them to Blue.
-    SetEntProp(client, Prop_Send, LIFESTATE_PROP, tempstate);    // Reset the lifestate variable.
-    TF2_RegeneratePlayer(client);                                // Resupply.
+    SetEntProp(client, Prop_Send, LIFESTATE_PROP, 2);               // Make sure the client won't die when we change their team.
+    ChangeClientTeam(client, TEAM_BLUE);                            // Change them to Blue.
+    SetEntProp(client, Prop_Send, LIFESTATE_PROP, tempstate);       // Reset the lifestate variable.
+    TF2_RegeneratePlayer(client);                                   // Resupply.
     
     if ( GetConVarInt(cv_Debug) & DEBUG_HEALTH == DEBUG_HEALTH ) LogMessage("%N's class : %d", client, TF2_GetPlayerClass(client));
     SetLargeHealth(client);
     
-    ManageZombieWeapons(client);                                                // Remove appropriate weapons.
-    EquipSlot(client, SLOT_MELEE);                                                // Equip melee.
+    ManageZombieWeapons(client);                                    // Remove appropriate weapons.
+    EquipSlot(client, SLOT_MELEE);                                  // Equip melee.
 }
 
 /*    Removes/replaces a client's weapons that are disallowed when they are a zombie.    */
@@ -2820,9 +2596,9 @@ stock SetLargeHealth(client)
     SetEntProp(client, Prop_Data, "m_iMaxHealth", newHealth);    // Update the client's max health value.
     SetEntProp(client, Prop_Send, "m_iHealth", newHealth);
     
-    new index = DataIndexForUserId(GetClientUserId(client));
-    g_Health[index] = newHealth;
-    g_MaxHealth[index] = i_maxHealth;
+    new slot = _PD_GetClientSlot(client);
+    PD_SetCurrentHealth(slot, newHealth);
+    PD_SetMaxHealth(slot, i_maxHealth);
 }
 
 /*    Kills the specified buildings owned by a client.    */
@@ -2980,8 +2756,7 @@ stock TintZombie(client)
     
     if ( client < 1 || client > MaxClients || !IsClientInGame(client) || !IsPlayerAlive(client) || GetClientTeam(client) != TEAM_BLUE ) return;
     
-    new userid = GetClientUserId(client);
-    new index = DataIndexForUserId(userid);
+    new index = _PD_GetClientSlot(client);
     new R = 255, G = 255, B = 255;
     new Float:classmax;
     new Float:zMax = GetConVarFloat(cv_ZHMax);    // tfbh_zhscale_max can never be below 1.0, so no trouble with inverse relationships here.
@@ -2994,27 +2769,27 @@ stock TintZombie(client)
     
     switch (TF2_GetPlayerClass(client))
     {
-        case TFClass_Scout:        classmax = 125.0;
+        case TFClass_Scout:     classmax = 125.0;
         case TFClass_Sniper:    classmax = 125.0;
-        case TFClass_Soldier:    classmax = 200.0;
-        case TFClass_DemoMan:    classmax = 175.0;
-        case TFClass_Heavy:        classmax = 300.0;
-        case TFClass_Medic:        classmax = 150.0;
-        case TFClass_Pyro:        classmax = 175.0;
-        case TFClass_Spy:        classmax = 125.0;
-        case TFClass_Engineer:    classmax = 125.0;
+        case TFClass_Soldier:   classmax = 200.0;
+        case TFClass_DemoMan:   classmax = 175.0;
+        case TFClass_Heavy:     classmax = 300.0;
+        case TFClass_Medic:     classmax = 150.0;
+        case TFClass_Pyro:      classmax = 175.0;
+        case TFClass_Spy:       classmax = 125.0;
+        case TFClass_Engineer:  classmax = 125.0;
         default:                classmax = 125.0;
     }
     
-    R = RoundFloat(Remap(float(g_Health[index]), classmax, classmax * zMax, 255.0, 41.0));    
+    R = RoundFloat(Remap(float(_PD_GetCurrentHealth(index)), classmax, classmax * zMax, 255.0, 41.0));    
     if ( R < 41 ) R = 41;                                                                    // Clamp value, eg. if health is less than normal class max.
     else if ( R > 255 ) R = 255;
     
-    G = RoundFloat(Remap(float(g_Health[index]), classmax, classmax * zMax, 255.0, 138.0));
+    G = RoundFloat(Remap(float(_PD_GetCurrentHealth(index)), classmax, classmax * zMax, 255.0, 138.0));
     if ( G < 138 ) G = 138;
     else if ( G > 255 ) G = 255;
     
-    B = RoundFloat(Remap(float(g_Health[index]), classmax, classmax * zMax, 255.0, 30.0));
+    B = RoundFloat(Remap(float(_PD_GetCurrentHealth(index)), classmax, classmax * zMax, 255.0, 30.0));
     if ( B < 30 ) B = 30;
     else if ( B > 255 ) B = 255;
     
