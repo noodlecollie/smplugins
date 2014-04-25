@@ -18,18 +18,12 @@
 #include <tf2items>
 
 #include "playerdata"
+#include "plugininfo"
 
 #pragma semicolon 1
 
 #define DEVELOPER       0
 #define LIFESTATE_PROP  "m_lifeState"
-
-// Plugin defines
-#define PLUGIN_NAME         "TF: Biohazard"
-#define PLUGIN_AUTHOR       "[X6] Herbius"
-#define PLUGIN_DESCRIPTION  "Hold off the zombies to win the round!"
-#define PLUGIN_VERSION      "0.0.0.2"
-#define PLUGIN_URL          "https://forums.alliedmods.net/showthread.php?p=2127501"
 
 // State flags
 // Control what aspects of the plugin will run.
@@ -187,15 +181,6 @@ new ofWeapon;
 new ofDamageForce;
 new ofDamagePosition;
 new ofDamageCustom;
-
-public Plugin:myinfo = 
-{
-    name = PLUGIN_NAME,
-    author = PLUGIN_AUTHOR,
-    description = PLUGIN_DESCRIPTION,
-    version = PLUGIN_VERSION,
-    url = PLUGIN_URL
-}
 
 public OnPluginStart()
 {
@@ -514,7 +499,7 @@ public OnPluginStart()
     LogMessage("DEVELOPER flag set! Reset this before release!");
     #endif
     
-    #ifdef PD_DEBUG
+    #if PD_DEBUG == true
     LogMessage("Player data array debugging is compiled in - probably need to turn this off before release.");
     #endif
     
@@ -1047,8 +1032,7 @@ public Event_TeamsChange(Handle:event, const String:name[], bool:dontBroadcast)
     // This means that they will not be able to rejoin Red until the next round.
     if ( !disconnect )
     {
-        if ( newTeam != TEAM_RED ) g_Zombie[DataIndexForUserId(userid)] = true;
-        else g_Zombie[DataIndexForUserId(userid)] = false;
+        PD_SetClientFlag(client, UsrZombie, newTeam != TEAM_RED);
     }
     
     // Check whether Red is out of alive players.
@@ -1152,17 +1136,17 @@ public Action:DoTaunt(client, const String:command[], argc)
     new slot = _PD_GetClientSlot(client);
     if ( !_PD_IsFlagSet(slot, UsrZombie) || (_PD_GetRageLevel(slot) < 100.0 && _PD_GetTeleportLevel(slot) < 100.0) || _PD_IsFlagSet(slot, UsrRaging) ) return Plugin_Continue;
         
-        // If we should teleport, do this first.
-        if ( _PD_GetTeleportLevel(slot) >= 100.0 )
-        {
-            ActivateTeleport(client);
-        }
-        
-        // Then activate rage.
-        if ( _PD_GetRageLevel(slot) >= 100.0 )
-        {
-            ActivateRage(client);
-        }
+    // If we should teleport, do this first.
+    if ( _PD_GetTeleportLevel(slot) >= 100.0 )
+    {
+        ActivateTeleport(client);
+    }
+    
+    // Then activate rage.
+    if ( _PD_GetRageLevel(slot) >= 100.0 )
+    {
+        ActivateRage(client);
+    }
     
     return Plugin_Handled;
 }
@@ -1262,13 +1246,13 @@ public Action:Event_Deflect(Handle:event, const String:name[], bool:dontBroadcas
     new ownerid = GetEventInt(event, "ownerid");
     new owner = GetClientOfUserId(ownerid);
     new weaponid = GetEventInt(event, "weaponid");
-    new slot = _PD_GetClientSlot(client);
+    new slot = _PD_GetClientSlot(owner);
     
     if ( GetClientTeam(owner) != TEAM_BLUE || !_PD_IsFlagSet(slot, UsrZombie) || weaponid != 0 ) return Plugin_Continue;
     
     // Add rage to the zombie who was pushed.
-    PD_IncrementRageLevel(slot, 3.0)
-    if ( _PD_GetRageLevel(slot) > 100.0 ) PD_SetRageLevel(slot, Float:value) = 100.0;
+    PD_IncrementRageLevel(slot, 3.0);
+    if ( _PD_GetRageLevel(slot) > 100.0 ) PD_SetRageLevel(slot, 100.0);
     
     return Plugin_Continue;
 }
@@ -1320,7 +1304,7 @@ public OnClientDisconnect(client)
     if ( IsClientReplay(client) || IsClientSourceTV(client) ) return;
     
     // Clear the client's data arrays.
-    PD_UnregisterClient(client)
+    PD_UnregisterClient(client);
     
     if ( g_PluginState & STATE_DISABLED == STATE_DISABLED ) return;
     
@@ -1370,7 +1354,6 @@ public MRESReturn:OnTakeDamage_Alive(client, Handle:hReturn, Handle:hParams)
     new Float:damagePosition[3];
     DHookGetParamObjectPtrVarVector(hParams, 1, ofDamagePosition, ObjectValueType_Vector, damagePosition);
     
-    new userid = GetClientUserId(client);
     new index = _PD_GetClientSlot(client);
     new cvDebug = GetConVarInt(cv_Debug);
     
@@ -1472,7 +1455,6 @@ public Action:OnTakeDamagePost(client, &attacker, &inflictor, &Float:damage, &da
             g_PluginState & STATE_NOT_IN_ROUND == STATE_NOT_IN_ROUND ||
             g_PluginState & STATE_FEW_PLAYERS == STATE_FEW_PLAYERS ) return Plugin_Continue;
     
-    new userid = GetClientUserId(client);
     new index = _PD_GetClientSlot(client);
     
     if ( GetConVarInt(cv_Debug) & DEBUG_ZOMBIFY == DEBUG_ZOMBIFY ) LogMessage("Client %N's health is now %d", client, GetEntProp(client, Prop_Send, "m_iHealth"));
@@ -1724,7 +1706,7 @@ stock OnJarateHit(jar)
     TE_SendToAll();
     
     // Clear out the index.
-    if ( gindex >= 0 ) PD_ResetPropertyToDefault(slot, JarateRef);
+    if ( gindex >= 0 ) PD_ResetPropertyToDefault(gindex, JarateRef);
 }
 
 // Calculates the repulsion vector from the source for an object at the target position dependant on the magnitude, using linear or quadratic falloff.
@@ -1993,7 +1975,7 @@ stock Cleanup(mode)
                     if ( cvDebug & DEBUG_DATA == DEBUG_DATA ) LogMessage("Client %N is connected.", i);
                     
                     // Give the client a slot in the data arrays.
-                    new index = PD_RegisterClient(i)
+                    new index = PD_RegisterClient(i);
                     if ( index < 0 )
                     {
                         LogError("MAJOR ERROR: Cannot find a free data index for client %N (MaxClients %d, MAXPLAYERS %d).", i, MaxClients, MAXPLAYERS);
@@ -2005,7 +1987,7 @@ stock Cleanup(mode)
                     DHookEntity(hDamageHook, false, i); 
                     SDKHook(i, SDKHook_OnTakeDamagePost, OnTakeDamagePost);
                     
-                    if ( cvDebug & DEBUG_DATA == DEBUG_DATA ) LogMessage("Data at index %d: user ID %d, zombie %d.", index, g_userIDMap[index], g_Zombie[index]);
+                    if ( cvDebug & DEBUG_DATA == DEBUG_DATA ) LogMessage("Data at index %d: user ID %d, zombie %d.", index, _PD_GetUserId(index), _PD_IsFlagSet(index, UsrZombie));
                 }
             }
             
@@ -3106,18 +3088,18 @@ public Action:Timer_ZombieHealthRefresh(Handle:timer, Handle:pack)
     {
         if ( IsClientInGame(i) && !IsClientReplay(i) && !IsClientSourceTV(i) )
         {
-            new index = DataIndexForUserId(GetClientUserId(i));
+            new index = _PD_GetClientSlot(i);
             
-            if ( GetClientTeam(i) == TEAM_BLUE && IsPlayerAlive(i) && g_Zombie[index] )
+            if ( GetClientTeam(i) == TEAM_BLUE && IsPlayerAlive(i) && _PD_IsFlagSet(index, UsrZombie) )
             {
                 // Check whether the zombie's health is above what we last recorded. If it is, update.
                 // Since health only drops over time, if we have more than last time then that's fine.
                 new health = GetEntProp(i, Prop_Send, "m_iHealth");
                 
-                if ( health > g_Health[index] ) g_Health[index] = health;
+                if ( health > _PD_GetCurrentHealth(index) ) PD_SetCurrentHealth(index, health);
                 else
                 {
-                    SetEntProp(i, Prop_Send, "m_iHealth", g_Health[index]);
+                    SetEntProp(i, Prop_Send, "m_iHealth", _PD_GetCurrentHealth(index));
                 }
                 
                 // Tint the zombie depending on his health level.
@@ -3127,7 +3109,7 @@ public Action:Timer_ZombieHealthRefresh(Handle:timer, Handle:pack)
                 new Float:debug_dist, Float:debug_rage;
                 
                 // Update the client's rage level.
-                if ( !g_Raging[index] )    // If not currently raging:
+                if ( !_PD_IsFlagSet(index, UsrRaging) )    // If not currently raging:
                 {
                     new Float:dist = CalcAvgDistance(i, TEAM_RED, 3);    // Check the nearest 3 players on Red.
                     if ( GetConVarBool(cv_DebugRage) ) debug_dist = dist;
@@ -3154,21 +3136,21 @@ public Action:Timer_ZombieHealthRefresh(Handle:timer, Handle:pack)
                     if ( GetConVarBool(cv_DebugRage) ) debug_rage = rage;
                     
                     // Update the zombie's rage.
-                    g_Rage[index] += rage;
-                    if ( g_Rage[index] > 100.0 ) g_Rage[index] = 100.0;
-                    else if ( g_Rage[index] < 0.0 ) g_Rage[index] = 0.0;
+                    PD_IncrementRageLevel(index, rage);
+                    if ( _PD_GetRageLevel(index) > 100.0 ) PD_SetRageLevel(index, 100.0);
+                    else if ( _PD_GetRageLevel(index) < 0.0 ) PD_SetRageLevel(index, 0.0);
                 }
                 else    // If raging:
                 {
                     // Work out how many points to deduct from the meter depending on the duration convar.
                     new Float:deduct = 20.0/GetConVarFloat(cv_ZRageDuration);    // 100/var per second, but we're refiring every 0.2 secs.
-                    g_Rage[index] -= deduct;
+                    PD_DecrementRageLevel(index, deduct);
                     
                     // If we have now reached zero, clamp and disable rage.
-                    if ( g_Rage[index] <= 0.0 )
+                    if ( _PD_GetRageLevel(index) <= 0.0 )
                     {
-                        g_Rage[index] = 0.0;
-                        g_Raging[index] = false;
+                        PD_SetRageLevel(index, 0.0);
+                        PD_SetFlag(index, UsrRaging, false);
                     }
                     else    // We're not at zero yet, apply effects that happen during duration of rage (stuns are handled in taunt hook).
                     {
@@ -3197,22 +3179,22 @@ public Action:Timer_ZombieHealthRefresh(Handle:timer, Handle:pack)
                     }
                 }
                                 
-                                // Update the client's teleport level if they are an Engineer.
-                                if ( TF2_GetPlayerClass(i) == TFClass_Engineer )
-                                {
-                                    // Increment the client's teleport counter.
-                                    // We refire every 0.2 seconds, so get the charge rate and divide it by 5.
-                                    g_TeleportLevel[index] += (GetConVarFloat(cv_TeleChargePerSec) / 5.0);
-                                    
-                                    // Clamp at 100%.
-                                    if ( g_TeleportLevel[index] > 100.0 )
-                                    {
-                                        g_TeleportLevel[index] = 100.0;
-                                    }
-                                }
+                // Update the client's teleport level if they are an Engineer.
+                if ( TF2_GetPlayerClass(i) == TFClass_Engineer )
+                {
+                    // Increment the client's teleport counter.
+                    // We refire every 0.2 seconds, so get the charge rate and divide it by 5.
+                    PD_IncrementTeleportLevel(index, GetConVarFloat(cv_TeleChargePerSec) / 5.0);
+                    
+                    // Clamp at 100%.
+                    if ( _PD_GetTeleportLevel(index) > 100.0 )
+                    {
+                        PD_SetTeleportLevel(index, 100.0);
+                    }
+                }
                 
                 // Update the HUD text.
-                if ( g_Raging[index] || g_Rage[index] >= 100.0 || g_TeleportLevel[index] >= 100.0 )    // If currently raging or meter is full, print in red.
+                if ( _PD_IsFlagSet(index, UsrRaging) || _PD_GetRageLevel(index) >= 100.0 || _PD_GetTeleportLevel(index) >= 100.0 )    // If currently raging or meter is full, print in red.
                 {
                     SetHudTextParams(-1.0,
                                     0.84,
@@ -3247,7 +3229,7 @@ public Action:Timer_ZombieHealthRefresh(Handle:timer, Handle:pack)
                 // If the player is an Engineer zombie, display their teleport status. 
                 if ( TF2_GetPlayerClass(i) == TFClass_Engineer )
                 {
-                    Format(prebuffer, sizeof(prebuffer), "\n%T: %d\%", "Teleport charge", i, RoundToFloor(g_TeleportLevel[index]));
+                    Format(prebuffer, sizeof(prebuffer), "\n%T: %d\%", "Teleport charge", i, RoundToFloor(_PD_GetTeleportLevel(index)));
                 }
                 
                 decl String:buffer[128];
@@ -3255,13 +3237,15 @@ public Action:Timer_ZombieHealthRefresh(Handle:timer, Handle:pack)
                 // Health: xxx
                 // Rage: xx% Dist xx.xx Rate xx.xx
                 // Teleport charge: xx%
-                if ( GetConVarBool(cv_DebugRage) ) Format(buffer, sizeof(buffer), "%T: %d\n%T: %d\% Dist %f Rate %f%s", "Health", i, GetEntProp(i, Prop_Send, "m_iHealth"), "Rage", i, RoundToFloor(g_Rage[index]), debug_dist, debug_rage * 5, prebuffer );
+                if ( GetConVarBool(cv_DebugRage) ) Format(buffer, sizeof(buffer), "%T: %d\n%T: %d\% Dist %f Rate %f%s", "Health", i, GetEntProp(i, Prop_Send, "m_iHealth"), "Rage", i, RoundToFloor(_PD_GetRageLevel(index)), debug_dist, debug_rage * 5, prebuffer );
+                
+                // Why does this not display the '%' after the rage level?? :c
                 
                 // Health: xxx
                 // Rage: xx%
                 // Teleport charge: xx%
                 // Percent symbols have gone derpy.
-                else Format(buffer, sizeof(buffer), "%T: %d\n%T: %d%c %s", "Health", i, GetEntProp(i, Prop_Send, "m_iHealth"), "Rage", i, RoundToFloor(g_Rage[index]), '\%', prebuffer);
+                else Format(buffer, sizeof(buffer), "%T: %d\n%T: %d%c %s", "Health", i, GetEntProp(i, Prop_Send, "m_iHealth"), "Rage", i, RoundToFloor(_PD_GetRageLevel(index)), '%', prebuffer);
                 
                 ShowSyncHudText(i, hs_ZText, buffer);
             }
@@ -3270,12 +3254,12 @@ public Action:Timer_ZombieHealthRefresh(Handle:timer, Handle:pack)
                 // Print Ubercharge level if we have the primary out.
                 new weapon = GetEntPropEnt(i, Prop_Send, "m_hActiveWeapon");
                 new medigun = GetPlayerWeaponSlot(i, SLOT_SECONDARY);
-                new oldFlags = g_UtilFlags[index];
+                new oldUberFlag = _PD_IsFlagSet(index, UsrUberReady);
                 
                 if ( medigun > MaxClients )
                 {
-                    if ( RoundToFloor(GetEntPropFloat(medigun, Prop_Send, "m_flChargeLevel") * 100.0) >= 100 ) g_UtilFlags[index] |= FLAG_UBER_READY;
-                    else if ( GetEntPropFloat(medigun, Prop_Send, "m_flChargeLevel") < 0.05 ) g_UtilFlags[index] &= ~FLAG_UBER_READY;
+                    if ( RoundToFloor(GetEntPropFloat(medigun, Prop_Send, "m_flChargeLevel") * 100.0) >= 100 ) PD_SetFlag(index, UsrUberReady, true);
+                    else if ( GetEntPropFloat(medigun, Prop_Send, "m_flChargeLevel") < 0.05 ) PD_SetFlag(index, UsrUberReady, false);
                 }
                 
                 if ( medigun > MaxClients && weapon > MaxClients && GetPlayerWeaponSlot(i, SLOT_PRIMARY) == weapon )
@@ -3287,7 +3271,8 @@ public Action:Timer_ZombieHealthRefresh(Handle:timer, Handle:pack)
                     {
                         SetHudTextParams(-1.0, 0.84, 0.21, 255, 79, 79, 255, 0, 0.0, 0.0, 0.0);
                         
-                        if ( (oldFlags & FLAG_UBER_READY != FLAG_UBER_READY) && (g_UtilFlags[index] & FLAG_UBER_READY == FLAG_UBER_READY) )
+                        // If we've just moved to having an uber ready, play the voice line.
+                        if ( oldUberFlag && _PD_IsFlagSet(index, UsrUberReady) )
                         {
                             FakeClientCommandEx(i, "voicemenu 1 7");
                         }
@@ -3316,10 +3301,10 @@ public Action:Timer_CondRefresh(Handle:timer, Handle:pack)
     // Search through the g_StartBoost array to find zombies who should be boosted.
     for ( new i = 0; i < MAXPLAYERS; i++ )
     {
-        if ( g_StartBoost[i] == true )    // If zombie should be boosted:
+        if ( _PD_IsFlagSet(i, UsrStartBoost) == true )    // If zombie should be boosted:
         {
             // Check client is valid.
-            new client = GetClientOfUserId(g_userIDMap[i]);
+            new client = GetClientOfUserId(_PD_GetUserId(i));
             if ( client < 1 ) continue;
             
             // NOTE: HP is now disabled altogether.
@@ -3373,16 +3358,6 @@ public Action:Timer_CondRefresh(Handle:timer, Handle:pack)
                     
                     case TFClass_DemoMan:    // Demo:
                     {
-//                         new weapon = GetPlayerWeaponSlot(i, SLOT_PRIMARY);    // CONFIRM: Is this primary or secondary? Demo slots are weird.
-//                         if ( weapon == -1 ) return Plugin_Handled;
-//                         
-//                         decl String:weaponName[64];
-//                         GetEntityClassname(weapon, weaponName, sizeof(weaponName));
-//                         if ( strcmp(weaponName, "tf_wearable_demoshield") == 0 )
-//                         {
-//                             TF2_AddCondition(i, TFCond_HalloweenCritCandy, 1.05);
-//                         }
-
                         // Looks like we have to do it a stupid way...
                         new shield = -1;
                         while ( (shield = FindEntityByClassname(shield, "tf_wearable_demoshield")) != -1 )
@@ -3455,8 +3430,8 @@ public Action:Timer_ScoutJump(Handle:timer, Handle:pack)
     // Don't run if the client is not a Blue zombie.
     if ( GetClientTeam(client) != TEAM_BLUE ) return Plugin_Handled;
     
-    new index = DataIndexForUserId(GetClientUserId(client));
-    if ( !g_Zombie[index] ) return Plugin_Handled;
+    new index = _PD_GetClientSlot(client);
+    if ( !_PD_IsFlagSet(index, UsrZombie) ) return Plugin_Handled;
     
     new Float:vec[3], Float:velocity[3];
     GetEntPropVector(client, Prop_Data, "m_vecVelocity", velocity);
@@ -3472,7 +3447,7 @@ public Action:Timer_ScoutJump(Handle:timer, Handle:pack)
     
     // Set jumping flag.
     SetEntProp(client, Prop_Send, "m_bJumping", 1);
-    g_HasSuperJumped[index] = true;
+    PD_SetFlag(index, UsrSuperJump, true);
     
     return Plugin_Handled;
 }
@@ -3543,6 +3518,8 @@ public Action:Debug_ShowData(client, args)
     if ( client < 0 ) return Plugin_Handled;
     else if ( client > 0 && !IsClientInGame(client) ) return Plugin_Handled;
     
+    // Disabling this for now since the player data arrays have changed.
+#if false
     if ( GetCmdArgs() > 0 )
     {
         new String:arg[16];
@@ -3562,15 +3539,17 @@ public Action:Debug_ShowData(client, args)
     {
         PrintToConsole(client, "%d: UserID %d\tzombie %d\thealth %d\tmaxhealth %d\tstartboost %d\trage %f\traging %d", i, g_userIDMap[i], g_Zombie[i], g_Health[i], g_MaxHealth[i], g_StartBoost[i], g_Rage[i], g_Raging[i]);
     }
+#endif
     
     return Plugin_Handled;
 }
 
 public Action:Debug_FullRage(client, args)
 {
-    if ( client > 0 && client <= MaxClients && IsClientInGame(client) && GetClientTeam(client) == TEAM_BLUE && g_Zombie[DataIndexForUserId(GetClientUserId(client))] && !g_Raging[DataIndexForUserId(GetClientUserId(client))] )
+    new slot = _PD_GetClientSlot(client);
+    if ( client > 0 && client <= MaxClients && IsClientInGame(client) && GetClientTeam(client) == TEAM_BLUE && _PD_IsFlagSet(slot, UsrZombie) && !_PD_IsFlagSet(slot, UsrRaging) )
     {
-        g_Rage[DataIndexForUserId(GetClientUserId(client))] = 100.0;
+        PD_SetRageLevel(slot, 100.0);
     }
     
     return Plugin_Handled;
