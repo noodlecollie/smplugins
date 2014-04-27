@@ -95,6 +95,7 @@
 #define DECREASED_RELOAD    97
 
 #define STANDARD_GREEN      148, 197, 143, 255
+#define TFBH_ROUND_TIMER    "tfbh_round_timer"
 
 // Weapon attribute strings
 new const String:defWrench[]        = "292 ; 3.0 ; 293 ; 0.0 ; 287 ; 2.0";
@@ -105,12 +106,12 @@ new const String:defJag[]           = "92 ; 1.3 ; 1 ; 0.75 ; 292 ; 3.0 ; 293 ; 0
 new const String:defEurekaEffect[]  = "352 ; 1.0 ; 353 ; 1.0 ; 287 ; 2.0";
 new const String:defSniperRifle[]   = "395 ; 1";
 
-new g_PluginState;      // Holds the global state of the plugin.
-new g_Disconnect;       // Sidesteps team count issues by tracking the index of a disconnecting player. See Event_TeamsChange.
-new bool:b_AllowChange; // If true, team changes will not be blocked.
-new bool:b_Setup;       // If true, PluginStart has already run. This avoids double loading from OnMapStart when plugin is loaded during a game.
-new g_GameRules = -1;   // Index of a tf_gamerules entity.
-new g_NextJarate = 0;   // If this is set, the next Jarate projectile to be created will have its owner set to the player of this user ID.
+new g_PluginState;                          // Holds the global state of the plugin.
+new g_Disconnect;                           // Sidesteps team count issues by tracking the index of a disconnecting player. See Event_TeamsChange.
+new bool:b_AllowChange;                     // If true, team changes will not be blocked.
+new bool:b_Setup;                           // If true, PluginStart has already run. This avoids double loading from OnMapStart when plugin is loaded during a game.
+new g_GameRules = INVALID_ENT_REFERENCE;    // Index of a tf_gamerules entity.
+new g_NextJarate = 0;                       // If this is set, the next Jarate projectile to be created will have its owner set to the player of this user ID.
 
 // ConVars
 new Handle:cv_PluginEnabled = INVALID_HANDLE;       // Enables or disables the plugin.
@@ -733,8 +734,6 @@ public OnMapStart()
     g_PluginState |= STATE_FEW_PLAYERS;
     
     Cleanup(CLEANUP_MAPSTART);
-    
-    HookRoundTimer();
 }
 
 public OnMapEnd()
@@ -744,8 +743,6 @@ public OnMapEnd()
     
     // Set the FEW_PLAYERS flag.
     g_PluginState |= STATE_FEW_PLAYERS;
-    
-    UnhookRoundTimer();
     
     Cleanup(CLEANUP_MAPEND);
 }
@@ -2078,26 +2075,28 @@ stock Cleanup(mode)
             // Is this needed?
             PD_Reset(true);
             
-            g_GameRules = FindEntityByClassname(-1, "tf_gamerules");
+            new gamerules = FindEntityByClassname(-1, "tf_gamerules");
             
-            if ( g_GameRules < 1 )
+            if ( gamerules < 1 )
             {
-                g_GameRules = CreateEntityByName("tf_gamerules");
+                gamerules = CreateEntityByName("tf_gamerules");
                 
-                if ( g_GameRules < 1 )
+                if ( gamerules < 1 )
                 {
                     LogError("ERROR: tf_gamerules unable to be found or created!");
                     return;
                 }
                 
-                DispatchKeyValue(g_GameRules, "targetname", "tf_gamerules");
+                DispatchKeyValue(gamerules, "targetname", "tf_gamerules");
                 
-                if ( !DispatchSpawn(g_GameRules) )
+                if ( !DispatchSpawn(gamerules) )
                 {
                     LogError("ERROR: tf_gamerules unable to be found or created!");
                     return;
                 }
             }
+            
+            g_GameRules = EntIndexToEntRef(gamerules);
             
             // Hook health packs.
             /*new i = -1;
@@ -2142,7 +2141,7 @@ stock Cleanup(mode)
                 hs_ZText = INVALID_HANDLE;
             }
             
-            g_GameRules = -1;
+            g_GameRules = INVALID_ENT_REFERENCE;
             
             // Unook health packs.
             /*new i = -1;
@@ -2800,7 +2799,8 @@ stock Float:Remap(Float:value, Float:a, Float:b, Float:x, Float:y)
 
 stock ModifyRespawnTimes()
 {
-    if ( !IsValidEntity(g_GameRules) ) return;
+    new gamerules = EntRefToEntIndex(g_GameRules);
+    if ( !IsValidEntity(gamerules) ) return;
     
     new min = GetConVarInt(cv_ZRespawnMin);
     new max = GetConVarInt(cv_ZRespawnMax);
@@ -2823,7 +2823,7 @@ stock ModifyRespawnTimes()
     else if ( respawnWave < min ) respawnWave = min;
     
     SetVariantInt(respawnWave);
-    AcceptEntityInput(g_GameRules, "SetBlueTeamRespawnWaveTime");
+    AcceptEntityInput(gamerules, "SetBlueTeamRespawnWaveTime");
 }
 
 /*    Given a client and a weapon classname, returns the weapon's entindex, or -1 on failure.    */
@@ -2953,56 +2953,6 @@ stock AttachParticle(ent, String:particleType[], Float:offset = 0.0, bool:battac
     ActivateEntity(particle);
     AcceptEntityInput(particle, "start");
     return particle;
-}
-
-stock HookRoundTimer()
-{
-    new cvdebug = GetConVarInt(cv_Debug);
-
-    new roundTimer = FindEntityByClassname(-1, "team_round_timer");
-    if ( roundTimer <= MaxClients )
-    {
-        if ( cvdebug & DEBUG_ROUNDTIMER == DEBUG_ROUNDTIMER ) LogMessage("modifyRoundTime: Team_round_timer not found.");
-        return;
-    }
-    
-    if ( cvdebug & DEBUG_ROUNDTIMER == DEBUG_ROUNDTIMER )
-    {
-        decl String:name[64];
-        name[0] = '\0';
-        GetEntPropString(roundTimer, Prop_Data, "m_iName", name, sizeof(name));
-        LogMessage("Name of team_round_timer: %s", name);
-    }
-    
-    HookSingleEntityOutput(roundTimer, "OnSetupStart", Hook_SetupStart);
-}
-
-stock UnhookRoundTimer()
-{
-    new cvdebug = GetConVarInt(cv_Debug);
-
-    new roundTimer = FindEntityByClassname(-1, "team_round_timer");
-    if ( roundTimer <= MaxClients )
-    {
-        if ( cvdebug & DEBUG_ROUNDTIMER == DEBUG_ROUNDTIMER ) LogMessage("modifyRoundTime: Team_round_timer not found.");
-        return;
-    }
-    
-    UnhookSingleEntityOutput(roundTimer, "OnSetupStart", Hook_SetupStart);
-}
-
-// For some reason this isn't being called.
-public Hook_SetupStart(const String:output[], caller, activator, Float:delay)
-{
-    new cvdebug = GetConVarInt(cv_Debug);
-
-    if ( cvdebug & DEBUG_ROUNDTIMER == DEBUG_ROUNDTIMER ) LogMessage("modifyRoundTime: Changing setup time to %d", GetConVarInt(cv_SetupTime));
-    SetVariantInt(GetConVarInt(cv_SetupTime));
-    AcceptEntityInput(caller, "SetSetupTime");
-    
-    if ( cvdebug & DEBUG_ROUNDTIMER == DEBUG_ROUNDTIMER ) LogMessage("modifyRoundTime: Changing round time to %d", GetConVarInt(cv_RoundTime));
-    SetVariantInt(GetConVarInt(cv_RoundTime));
-    AcceptEntityInput(caller, "SetTime");
 }
 
 public Action:Timer_EnableStunnedSentry(Handle:timer, Handle:pack)
