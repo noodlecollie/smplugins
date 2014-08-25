@@ -1,1 +1,1 @@
-#define PLUGIN_BUILD 7
+#define PLUGIN_BUILD 59

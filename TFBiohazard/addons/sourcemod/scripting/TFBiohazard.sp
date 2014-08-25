@@ -22,8 +22,10 @@
 
 #pragma semicolon 1
 
-#define DEVELOPER       0
-#define LIFESTATE_PROP  "m_lifeState"
+#define DEVELOPER           0
+#define LIFESTATE_PROP      "m_lifeState"
+#define TFBH_CPM            "tfbh_cp_master"
+#define TFBH_ROUND_TIMER    "tfbh_round_timer"
 
 // State flags
 // Control what aspects of the plugin will run.
@@ -95,7 +97,6 @@
 #define DECREASED_RELOAD    97
 
 #define STANDARD_GREEN      148, 197, 143, 255
-#define TFBH_ROUND_TIMER    "tfbh_round_timer"
 
 // Weapon attribute strings
 new const String:defWrench[]        = "292 ; 3.0 ; 293 ; 0.0 ; 287 ; 2.0";
@@ -112,6 +113,7 @@ new bool:b_AllowChange;                     // If true, team changes will not be
 new bool:b_Setup;                           // If true, PluginStart has already run. This avoids double loading from OnMapStart when plugin is loaded during a game.
 new g_GameRules = INVALID_ENT_REFERENCE;    // Index of a tf_gamerules entity.
 new g_NextJarate = 0;                       // If this is set, the next Jarate projectile to be created will have its owner set to the player of this user ID.
+new g_RoundTimer = INVALID_ENT_REFERENCE;
 
 // ConVars
 new Handle:cv_PluginEnabled = INVALID_HANDLE;       // Enables or disables the plugin.
@@ -431,14 +433,14 @@ public OnPluginStart()
                                         "Amount of setup time given to survivors before players are zombified.",
                                         FCVAR_PLUGIN | FCVAR_NOTIFY | FCVAR_ARCHIVE,
                                                                                 true,
-                                                                                10.0);
+                                                                                1.0);
                                                                                 
     cv_RoundTime = CreateConVar("tfbh_round_time",
                                         "300",
                                         "Amount of time Red players must survive before they win the round.",
                                         FCVAR_PLUGIN | FCVAR_NOTIFY | FCVAR_ARCHIVE,
                                                                                 true,
-                                                                                10.0);
+                                                                                1.0);
     
     cv_Unbalance = FindConVar("mp_teams_unbalance_limit");
     cv_Autobalance = FindConVar("mp_autoteambalance");
@@ -500,8 +502,8 @@ public OnPluginStart()
     LogMessage("DEVELOPER flag set! Reset this before release!");
     #endif
     
-    #if PD_DEBUG == true
-    LogMessage("Player data array debugging is compiled in - probably need to turn this off before release.");
+    #if defined PD_DEBUG
+    LogMessage("Player data array debugging compiled in - this will be (marginally) less efficient.");
     #endif
     
     // If we're not enabled, don't set anything up.
@@ -864,7 +866,7 @@ public Event_SetupFinished(Handle:event, const String:name[], bool:dontBroadcast
         
         MakeClientZombie2(players[i]);                                            // Make the client into a zombie.
         //g_StartBoost[DataIndexForUserId(GetClientUserId(players[i]))] = true;    // Mark them as being roundstart boosted.
-        PD_SetClientFlag(i, UsrStartBoost, true);
+        PD_SetClientFlag(players[i], UsrStartBoost, true);
     }
 }
 
@@ -1559,8 +1561,21 @@ public Event_PlayerSpawn(Handle:event, const String:name[], bool:dontBroadcast)
 /*    Called when an entity is created.    */
 public OnEntityCreated(entity, const String:classname[])
 {
-    if ( g_PluginState & STATE_DISABLED == STATE_DISABLED ||
-         g_PluginState & STATE_FEW_PLAYERS == STATE_FEW_PLAYERS ) return;
+    if ( g_PluginState & STATE_DISABLED == STATE_DISABLED ) return;
+    
+    if ( strcmp(classname, "team_round_timer") == 0 )
+    {
+        // TODO: Can we block things from spawning here?
+    
+        // If we haven't recorded a timer:
+        if ( g_RoundTimer == INVALID_ENT_REFERENCE || EntRefToEntIndex(g_RoundTimer) <= MaxClients )
+        {
+            g_RoundTimer = EntIndexToEntRef(entity);
+            SDKHook(entity, SDKHook_Spawn, OnRoundTimerSpawned);
+        }
+    }
+    
+    if ( g_PluginState & STATE_FEW_PLAYERS == STATE_FEW_PLAYERS ) return;
     
     // If sentry, hook to change to mini.
     if ( strcmp(classname, "obj_sentrygun") == 0 )
@@ -1617,6 +1632,34 @@ public OnSentrySpawned(sentry)
     }
     
     SDKUnhook(sentry, SDKHook_Spawn, OnSentrySpawned);
+}
+
+public OnRoundTimerSpawned(timer)
+{
+    SetVariantInt(GetConVarInt(cv_SetupTime));
+    AcceptEntityInput(timer, "SetSetupTime");
+    
+    SetVariantInt(GetConVarInt(cv_RoundTime));
+    AcceptEntityInput(timer, "SetMaxTime");
+    SetVariantInt(GetConVarInt(cv_RoundTime));
+    AcceptEntityInput(timer, "SetTime");
+    
+    // Reset the timer reference here - the function will find it again if it exists.
+    // This is because this hook is called when the round starts but before the actual RoundStart event is fired,
+    // so the reference to the CP master could be stale.
+    // Really we need a better method for keeping track of the master...
+    ControlPointMaster(true);
+    decl String:name[64];
+    name[0] = '\0';
+    GetControlPointMasterName(name, sizeof(name));
+    if ( GetConVarInt(cv_Debug) & DEBUG_ROUNDTIMER == DEBUG_ROUNDTIMER ) LogMessage("CPM name: %s", name);
+    
+    decl String:buffer[128];
+    Format(buffer, sizeof(buffer), "OnFinished %s:SetWinner:%d:0:-1", name, TEAM_RED);
+    if ( GetConVarInt(cv_Debug) & DEBUG_ROUNDTIMER == DEBUG_ROUNDTIMER ) LogMessage("AddOutput string: %s", buffer);
+    
+    SetVariantString(buffer);
+    AcceptEntityInput(timer, "AddOutput");
 }
 
 public Action:TF2_CalcIsAttackCritical(client, weapon, String:weaponname[], &bool:result)
@@ -1857,17 +1900,52 @@ stock RoundWin(team = 0)
 {
     if ( !IsServerProcessing() || !IsValidEntity(0) ) return;
     
-    new ent = FindEntityByClassname(-1, "team_control_point_master");
-    if (ent == -1)
-    
-    {
-        ent = CreateEntityByName("team_control_point_master");
-        DispatchSpawn(ent);
-        AcceptEntityInput(ent, "Enable");
-    }
+    new ent = ControlPointMaster();
     
     SetVariantInt(team);
     AcceptEntityInput(ent, "SetWinner");
+}
+
+stock ControlPointMaster(bool: reset = false)
+{
+    static cpm = INVALID_ENT_REFERENCE;
+    
+    if ( reset )
+    {
+        cpm = INVALID_ENT_REFERENCE;
+        return -1;
+    }
+    
+    if ( cpm == INVALID_ENT_REFERENCE )
+    {
+        new ent = FindEntityByClassname(-1, "team_control_point_master");
+        
+        if (ent <= MaxClients)
+        {
+            ent = CreateEntityByName("team_control_point_master");
+            if ( ent <= MaxClients ) ThrowError("Could not create team_control_point_master!");
+            
+            DispatchKeyValue(ent, "targetname", TFBH_CPM);
+            DispatchSpawn(ent);
+            AcceptEntityInput(ent, "Enable");
+        }
+        else
+        {
+            DispatchKeyValue(ent, "targetname", TFBH_CPM);
+        }
+        
+        cpm = EntIndexToEntRef(ent);
+        return ent;
+    }
+    else
+    {
+        return EntRefToEntIndex(cpm);
+    }
+}
+
+stock GetControlPointMasterName(String: name[], size)
+{
+    GetEntPropString(ControlPointMaster(), Prop_Data, "m_iName", name, size);
 }
 
 /*    Ends the round and cleans up.    */
@@ -1903,6 +1981,8 @@ stock Cleanup(mode)
             
             PD_Reset();         // Reset sets defaults to all, which is what we want. The default state flag has zombification set.
             g_NextJarate = 0;
+            g_RoundTimer = INVALID_ENT_REFERENCE;
+            ControlPointMaster(true);
         }
         
         case CLEANUP_FIRSTSTART:
@@ -1991,24 +2071,31 @@ stock Cleanup(mode)
             // Check player counts.
             if ( PlayerCountAdequate() ) g_PluginState &= ~STATE_FEW_PLAYERS;
             else g_PluginState |= STATE_FEW_PLAYERS;
+            
+            ControlPointMaster(true);
         }
         
         case CLEANUP_ENDALL:    // Called when the plugin is unloaded or is disabled.
         {
+            new cvdebug = GetConVarInt(cv_Debug);
+            if ( cvdebug & DEBUG_CRASHES == DEBUG_CRASHES ) LogMessage("Ending plugin:");
             // Reset balance cvars
             ServerCommand("mp_teams_unbalance_limit %d", cvdef_Unbalance);
             ServerCommand("mp_autoteambalance %d", cvdef_Autobalance);
             ServerCommand("mp_scrambleteams_auto %d", cvdef_Scramble);
             
             // End the current round in progress.
+            if ( cvdebug & DEBUG_CRASHES == DEBUG_CRASHES ) LogMessage("Winning round.");
             RoundWin();
             
             // for ( new i = 0; i < MAXPLAYERS; i++ )
             // {
                 // ClearAllArrayDataForIndex(i, true);
             // }
+            if ( cvdebug & DEBUG_CRASHES == DEBUG_CRASHES ) LogMessage("Resetting data arrays.");
             PD_Reset(true);
             
+            if ( cvdebug & DEBUG_CRASHES == DEBUG_CRASHES ) LogMessage("Killing timers.");
             if ( timer_ZRefresh != INVALID_HANDLE )
             {
                 KillTimer(timer_ZRefresh);
@@ -2026,22 +2113,12 @@ stock Cleanup(mode)
                 CloseHandle(hs_ZText);
                 hs_ZText = INVALID_HANDLE;
             }
+            
+            ControlPointMaster(true);
         }
         
         case CLEANUP_ROUNDSTART:    // Called even if plugin is disabled, so don't put anything important here.
         {
-            // Reset all stored health values.
-            // for ( new i = 0; i < MAXPLAYERS; i++ )
-            // {
-                // g_Health[i] = 0;
-                // g_MaxHealth[i] = 0;
-                // g_Rage[i] = 0.0;
-                // g_TeleportLevel[i] = 0.0;
-                // g_Raging[i] = false;
-                // g_HasSuperJumped[i] = false;
-                // g_PrevJumpState[i] = false;
-            // }
-            
             PD_Reset();
         }
         
@@ -2097,25 +2174,8 @@ stock Cleanup(mode)
             }
             
             g_GameRules = EntIndexToEntRef(gamerules);
-            
-            // Hook health packs.
-            /*new i = -1;
-            while ( (i = FindEntityByClassname(i, "item_healthkit_small")) != -1 )
-            {
-                SDKHook(i, SDKHook_Touch, OnHealthPackTouch);
-            }
-            
-            i = -1;
-            while ( (i = FindEntityByClassname(i, "item_healthkit_medium")) != -1 )
-            {
-                SDKHook(i, SDKHook_Touch, OnHealthPackTouch);
-            }
-            
-            i = -1;
-            while ( (i = FindEntityByClassname(i, "item_healthkit_full")) != -1 )
-            {
-                SDKHook(i, SDKHook_Touch, OnHealthPackTouch);
-            }*/
+            g_RoundTimer = INVALID_ENT_REFERENCE;
+            ControlPointMaster(true);
         }
         
         case CLEANUP_MAPEND:
@@ -2142,25 +2202,8 @@ stock Cleanup(mode)
             }
             
             g_GameRules = INVALID_ENT_REFERENCE;
-            
-            // Unook health packs.
-            /*new i = -1;
-            while ( (i = FindEntityByClassname(i, "item_healthkit_small")) != -1 )
-            {
-                SDKUnhook(i, SDKHook_Touch, OnHealthPackTouch);
-            }
-            
-            i = -1;
-            while ( (i = FindEntityByClassname(i, "item_healthkit_medium")) != -1 )
-            {
-                SDKUnhook(i, SDKHook_Touch, OnHealthPackTouch);
-            }
-            
-            i = -1;
-            while ( (i = FindEntityByClassname(i, "item_healthkit_full")) != -1 )
-            {
-                SDKUnhook(i, SDKHook_Touch, OnHealthPackTouch);
-            }*/
+            g_RoundTimer = INVALID_ENT_REFERENCE;
+            ControlPointMaster(true);
         }
     }
 }
@@ -2194,7 +2237,7 @@ stock MakeClientZombie2(client)
     PD_SetTeleportLevel(index, 0.0);                    // Reset their teleport level.
     PD_SetFlag(index, UsrRaging, false);                // Flag not raging.
     PD_SetFlag(index, UsrSuperJump, false);             // Reset jump state.
-    PD_SetFlag(index, UsrJumpPrevFrame, false);
+    PD_SetFlag(index, UsrJumpPrevFrame, false);         // Reset previous frame's jump button state.
     
     new tempstate = GetEntProp(client, Prop_Send, LIFESTATE_PROP);
     SetEntProp(client, Prop_Send, LIFESTATE_PROP, 2);               // Make sure the client won't die when we change their team.

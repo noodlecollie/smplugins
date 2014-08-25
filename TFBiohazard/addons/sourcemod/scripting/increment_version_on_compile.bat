@@ -15,7 +15,9 @@ if %2 NEQ 0 (
 setlocal ENABLEDELAYEDEXPANSION
 
 REM This will get the build number and increment it.
-FOR /F "tokens=3 delims= " %%x in (%1) DO (
+REM Note: without "usebackq" file paths surrounded by quotes won't work.
+REM HATE YOU TOO, BATCH.
+FOR /F "usebackq tokens=3 delims= " %%x in (%1) DO (
     set /a buildno=%%x+1
     echo New build number: !buildno!
 )

@@ -16,7 +16,8 @@
 // 1. Add a new entry to the UserStateFlags enum.
 
 // Define this for checking pre-/post-conditions of functions.
-#define PD_DEBUG true
+// What did we learn? DON'T USE ASSERT STATEMENTS IN SP. They crash the server if they fail. :c Not ideal.
+#define PD_DEBUG
 
 #define TOTAL_SLOTS     MAXPLAYERS  // Total number of slots available for player data.
 #define INVALID_USERID  0           // Invalid user ID.
@@ -55,9 +56,9 @@ static ValueDefaults[PlayerData] =    // Holds the default values for each prope
     0.0                     // 0 teleport level
 }
 
-static PlayerDataArray[TOTAL_SLOTS][TOTAL_PROPERTIES];   // Main array that holds property data for players.
-static NumOccupiedSlots = 0;                        // Number of slots that are occupied. They aren't contiguous (ie. the highest occupied slot number is probably higher than this).
-                                                    // Note that this is only accurate if only the functions below are used for modifying the data.
+static PlayerDataArray[TOTAL_SLOTS][TOTAL_PROPERTIES];  // Main array that holds property data for players.
+static NumOccupiedSlots = 0;                            // Number of slots that are occupied. They aren't contiguous (ie. the highest occupied slot number is probably higher than this).
+                                                        // Note that this is only accurate if only the functions below are used for modifying the data.
 
 // Note: I'm not exactly sure on what the SourceMod conventions are for this kind of thing, but
 // the functions below that are prefixed with an underscore (_PD) are accessor functions which do not modify the array data.
@@ -128,19 +129,21 @@ stock PD_ToggleFlag(slot, UserStateFlags:flag)
 /// Throws an error if no array slots are left, or if the client is invalid.
 stock PD_RegisterClient(client)
 {
-#if PD_DEBUG == true
-    assert NumOccupiedSlots >= 0;
+#if defined PD_DEBUG
+    //LogMessage("RegisterClient Pre: NOS = %d", NumOccupiedSlots);
+    if ( NumOccupiedSlots < 0 ) ThrowError("PD_RegisterClient precondition failed!");
     new prevOccupied = NumOccupiedSlots;
 #endif
 
     new userid = GetClientUserId(client);
     if ( userid < 1 ) ThrowError("Client %d is not valid.", client);
     
-#if PD_DEBUG == false
+#if !defined PD_DEBUG
     return PD_AddUserId(userid);
 #else
     new ret = PD_AddUserId(userid);
-    assert NumOccupiedSlots == prevOccupied + 1;
+    //LogMessage("RegisterClient Post: NOS = %d", NumOccupiedSlots);
+    if ( NumOccupiedSlots != prevOccupied + 1 ) ThrowError("PD_RegisterClient postcondition failed!");
     return ret;
 #endif
 }
@@ -149,8 +152,9 @@ stock PD_RegisterClient(client)
 /// Throws an error if the client is invalid.
 stock PD_UnregisterClient(client)
 {
-#if PD_DEBUG == true
-    assert NumOccupiedSlots >= 0;
+#if defined PD_DEBUG
+    //LogMessage("UnregisterClient Pre: NOS = %d", NumOccupiedSlots);
+    if ( NumOccupiedSlots < 0 ) ThrowError("PD_UnregisterClient precondition failed!");
     new prevOccupied = NumOccupiedSlots;
     new bool:clientExists = _PD_IsUserIdPresent(GetClientUserId(client));
 #endif
@@ -160,9 +164,17 @@ stock PD_UnregisterClient(client)
     
     PD_RemoveUserId(userid);
     
-#if PD_DEBUG == true
-    if ( clientExists ) assert NumOccupiedSlots == prevOccupied - 1;
-    else assert NumOccupiedSlots == prevOccupied;
+#if defined PD_DEBUG
+    if ( clientExists )
+    {
+        //LogMessage("UnregisterClient Post (exists): NOS = %d", NumOccupiedSlots);
+        if ( NumOccupiedSlots != prevOccupied - 1 ) ThrowError("PD_UnregisterClient postcondition 1 failed!");
+    }
+    else
+    {
+        //LogMessage("UnregisterClient Post (!exists): NOS = %d", NumOccupiedSlots);
+        if ( NumOccupiedSlots != prevOccupied ) ThrowError("PD_UnregisterClient postcondition 2 failed!");
+    }
 #endif
 }
 
@@ -172,19 +184,21 @@ stock PD_UnregisterClient(client)
 /// function returning -1).
 stock _PD_GetClientSlot(client, bool:throwError = true)
 {
-#if PD_DEBUG == true
-    assert NumOccupiedSlots >= 0;
+#if defined PD_DEBUG
+    //LogMessage("GetClientSlot Pre: NOS = %d", NumOccupiedSlots);
+    if ( NumOccupiedSlots < 0 ) ThrowError("_PD_GetClientSlot precondition failed!");
     new prevOccupied = NumOccupiedSlots;
 #endif
 
     new userid = GetClientUserId(client);
     if ( userid < 1 ) ThrowError("Client %d is not valid.", client);
     
-    new ret =  _PD_SlotForUserId(client);
+    new ret =  _PD_SlotForUserId(userid);
     if ( ret < 0 && throwError ) ThrowError("Client %d is not present in the data arrays.", client);    // Fail first!
     
-#if PD_DEBUG == true
-    assert NumOccupiedSlots == prevOccupied;
+#if defined PD_DEBUG
+    //LogMessage("GetClientSlot Post: NOS = %d", NumOccupiedSlots);
+    if ( NumOccupiedSlots != prevOccupied ) ThrowError("_PD_GetClientSlot postcondition failed!");
 #endif
 
     return ret;
@@ -255,8 +269,9 @@ stock _PD_IsFull()
 /// Updates NumOccupiedSlots if userids is true.
 stock PD_Reset(bool:userids = false)
 {
-#if PD_DEBUG == true
-    assert NumOccupiedSlots >= 0;
+#if defined PD_DEBUG
+    //LogMessage("Reset Pre: NOS = %d", NumOccupiedSlots);
+    if ( NumOccupiedSlots < 0 ) ThrowError("PD_Reset precondition failed!");
     new prevOccupied = NumOccupiedSlots;
 #endif
 
@@ -267,9 +282,17 @@ stock PD_Reset(bool:userids = false)
     
     if ( userids ) NumOccupiedSlots = 0;
     
-#if PD_DEBUG == true
-    if ( userids ) assert NumOccupiedSlots == 0;
-    else assert NumOccupiedSlots == prevOccupied;
+#if defined PD_DEBUG
+    if ( userids )
+    {
+        //LogMessage("Reset Post (userids): NOS = %d", NumOccupiedSlots);
+        if ( NumOccupiedSlots != 0 ) ThrowError("PD_Reset postcondition 1 failed!");
+    }
+    else
+    {
+        //LogMessage("Reset Post (!userids): NOS = %d", NumOccupiedSlots);
+        if ( NumOccupiedSlots != prevOccupied ) ThrowError("PD_Reset postcondition 1 failed!");
+    }
 #endif
 }
 
@@ -279,22 +302,32 @@ stock PD_Reset(bool:userids = false)
 /// Modifies NumOccupiedSlots if userids is true.
 stock PD_ResetToDefault(slot, bool:userids = false)
 {
-#if PD_DEBUG == true
-    assert NumOccupiedSlots >= 0;
+#if defined PD_DEBUG
+    //LogMessage("ResetToDefault Pre: NOS = %d", NumOccupiedSlots);
+    if ( NumOccupiedSlots < 0 ) ThrowError("PD_ResetToDefault precondition failed!");
     new prevOccupied = NumOccupiedSlots;
 #endif
 
     new start = userids ? 0 : 1;
+    new bool:useridWasOccupied = (_PD_GetUserId(slot) > 0);
     for ( new i = start; i < _PD_TotalProperties(); i++ )
     {
         PD_ResetPropertyToDefault(slot, PlayerData:i);
     }
     
-    if ( userids ) NumOccupiedSlots--;
+    if ( userids && useridWasOccupied ) NumOccupiedSlots--;
     
-#if PD_DEBUG == true
-    if ( userids ) assert NumOccupiedSlots == prevOccupied - 1;
-    else assert NumOccupiedSlots == prevOccupied;
+#if defined PD_DEBUG
+    if ( userids && useridWasOccupied )
+    {
+        //LogMessage("ResetToDefault Post (userids): NOS = %d", NumOccupiedSlots);
+        if ( NumOccupiedSlots != prevOccupied - 1 ) ThrowError("PD_ResetToDefault postcondition 1 failed!");
+    }
+    else
+    {
+        //LogMessage("ResetToDefault Post (!userids): NOS = %d", NumOccupiedSlots);
+        if ( NumOccupiedSlots != prevOccupied ) ThrowError("PD_ResetToDefault postcondition 2 failed!");
+    }
 #endif
 }
 
@@ -397,6 +430,38 @@ static stock bool:_PD_IsUserIdPresent(userid)
 static stock bool:_PD_IsSlotOccupied(slot)
 {
     return (PlayerDataArray[slot][UserId] != INVALID_USERID);
+}
+
+/// Prints all occupied player data to the console if PD_DEBUG is defined.
+/// Does nothing otherwise.
+stock _PD_PrintAllData()
+{
+#if defined PD_DEBUG
+    LogMessage("Recorded number of player entries: %d", NumOccupiedSlots);
+    
+    new actualCount = 0;
+    for ( new i = 0; i < _PD_TotalSlots(); i++ )
+    {
+        // Only print if there is a valid userid.
+        if ( _PD_GetUserId(i) < 1 ) continue;
+        
+        actualCount++;
+        
+        decl String:str[512];
+        str[0] = '\0';
+        
+        for ( new j = 0; j < _PD_TotalProperties(); j++ )
+        {
+            decl String:buffer[64];
+            Format(buffer, sizeof(buffer), (j == 0 ? "%f" : ", %f"), float(_:PlayerDataArray[i][j]));
+            StrCat(str, sizeof(str), buffer)
+        }
+        
+        LogMessage("Slot %d: %s", i, str);
+    }
+    
+    LogMessage("Actual count of player entries: %d (accurate: %s)", actualCount, (actualCount == NumOccupiedSlots ? "yes" : "no"));
+#endif
 }
 
 // Undef the defines - it's safer to provide accessor functions.
