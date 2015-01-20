@@ -1,0 +1,5 @@
+#define PLUGIN_MAJOR 0
+#define PLUGIN_MINOR 0
+#define PLUGIN_REVISION 2
+#define PLUGIN_BUILD 74
+#define PLUGIN_VERSION "0.0.2.74"
