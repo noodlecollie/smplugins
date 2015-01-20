@@ -14,7 +14,6 @@
 #include <sdktools>
 #include <sdkhooks>
 #include <tf2_stocks>
-#include <dhooks>
 #include <tf2items>
 
 #include "playerdata"
@@ -46,6 +45,25 @@
 #define DEBUG_RAGE          (1 << 7)    // Debugging zombie rage. 128
 #define DEBUG_HEALTHPACKS   (1 << 8)    // Debugging zombie health pack touches. 256
 #define DEBUG_ROUNDTIMER    (1 << 9)    // Debugging setting round/setup time. 512
+#define DEBUG_ALLFLAGS      1023
+
+#define DEBUG_ALL
+
+public Action:PrintAllDebugFlagValues(args)
+{
+    LogMessage("%d: General debugging.", DEBUG_GENERAL);
+    LogMessage("%d: Debugging team changes.", DEBUG_TEAMCHANGE);
+    LogMessage("%d: Debugging health calculations.", DEBUG_HEALTH);
+    LogMessage("%d: Debugging OnTakeDamage hook.", DEBUG_DAMAGE);
+    LogMessage("%d: Debugging data arrays.", DEBUG_DATA);
+    LogMessage("%d: Debugging crashes. NOTE: These are probably caused by an outdated SM, so check the latest branch first.", DEBUG_CRASHES);
+    LogMessage("%d: Debugging creation of zombies.", DEBUG_ZOMBIFY);
+    LogMessage("%d: Debugging zombie rage.", DEBUG_RAGE);
+    LogMessage("%d: Debugging zombie health pack touches.", DEBUG_HEALTHPACKS);
+    LogMessage("%d: Debugging setting round/setup time.", DEBUG_ROUNDTIMER);
+    LogMessage("Note that these are subject to change, may not do anything at all and should not be relied upon.");
+    return Plugin_Handled;
+}
 
 // Cleanup flags
 // Pass one of these to Cleanup() to specify what to clean up.
@@ -148,9 +166,6 @@ new Handle:cv_TeleChargePerSec = INVALID_HANDLE;    // How fast a zombie Enginee
 new Handle:cv_SetupTime = INVALID_HANDLE;           // Amount of setup time given to survivors before players are zombified.
 new Handle:cv_RoundTime = INVALID_HANDLE;           // Amount of time Red players must survive before they win the round.
 
-// DHooks
-new Handle:hDamageHook = INVALID_HANDLE;            // SDKHook's OnTakeDamage reports damage values before TF2 applies spread. Hence, we have to manually hook OnTakeDamage_Alive.
-
 // Timers
 new Handle:timer_ZRefresh = INVALID_HANDLE;         // Timer to refresh zombie health.
 new Handle:timer_Cond = INVALID_HANDLE;             // Timer to refresh zombie conditions.
@@ -172,19 +187,6 @@ new cvdef_Autobalance;                              // Original value of mp_auto
 new cvdef_Scramble;                                 // Original value of mp_scrambleteams_auto.
 new cvdef_Stalemate;                                // Original value of mp_stalemate_enable.
 
-// DHook offsets
-// When hooking OnTakeDamage_Alive, the one parameter passed is a CDamageInfo struct,
-// within which we need to know the offsets of the different variables.
-// When the plugin starts, the offsets inside the struct are read from the gamedata and stored.
-new ofAttacker;
-new ofInflictor;
-new ofDamage;
-//new ofDamageType;
-new ofWeapon;
-new ofDamageForce;
-new ofDamagePosition;
-new ofDamageCustom;
-
 public OnPluginStart()
 {
     LogMessage("== %s v%s ==", PLUGIN_NAME, PLUGIN_VERSION);
@@ -198,10 +200,6 @@ public OnPluginStart()
     else if ( !LibraryExists("sdkhooks") )
     {
         SetFailState("Critical extension 'sdkhooks' not found, plugin terminated.");
-    }
-    else if ( !LibraryExists("dhooks") )
-    {
-        SetFailState("Critical extension 'dhooks' not found, plugin terminated.");
     }
     else LogMessage("All required dependencies installed.");
     
@@ -223,12 +221,26 @@ public OnPluginStart()
                                         true,
                                         1.0);
 
+    decl String:debug_desc[128];
+    Format(debug_desc, sizeof(debug_desc), "Enables or disables debugging using debug flags. To enable all flags, set to %d", DEBUG_ALLFLAGS);
+    
+    #if defined DEBUG_ALL
+    decl String:buffer[16];
+    Format(buffer, sizeof(buffer), "%d", DEBUG_ALLFLAGS);
     cv_Debug  = CreateConVar("tfbh_debug",
-                                        "0",
-                                        "Enables or disables debugging using debug flags.",
+                                        buffer,
+                                        debug_desc,
                                         FCVAR_PLUGIN | FCVAR_NOTIFY | FCVAR_DONTRECORD,
                                         true,
                                         0.0);
+    #else
+    cv_Debug  = CreateConVar("tfbh_debug",
+                                        "0",
+                                        debug_desc,
+                                        FCVAR_PLUGIN | FCVAR_NOTIFY | FCVAR_DONTRECORD,
+                                        true,
+                                        0.0);
+    #endif
     
     cv_DebugRage  = CreateConVar("tfbh_debug_rage",
                                         "0",
@@ -447,6 +459,8 @@ public OnPluginStart()
     cv_Scramble = FindConVar("mp_scrambleteams_auto");
     cv_Stalemate = FindConVar("mp_stalemate_enable");
     
+    RegServerCmd("tfbh_debug_flags", PrintAllDebugFlagValues, "Prints debug flag values to the server console, for use with tfbh_debug.", FCVAR_PLUGIN);
+    
     HookEventEx("teamplay_round_start",        Event_RoundStart,    EventHookMode_Post);
     HookEventEx("teamplay_round_win",        Event_RoundWin,        EventHookMode_Post);
     HookEventEx("teamplay_round_stalemate",        Event_RoundStalemate,    EventHookMode_Post);
@@ -457,7 +471,7 @@ public OnPluginStart()
     HookEventEx("object_deflected",         Event_Deflect,         EventHookMode_Post);
     HookEventEx("post_inventory_application",     Event_Inventory,     EventHookMode_Post);
     
-    AddCommandListener(TeamChange,          "jointeam");    // For blocking team change commands.
+    AddCommandListener(TeamChange,     "jointeam");    // For blocking team change commands.
     AddCommandListener(DoTaunt,        "taunt");       // Activating zombie rage.
     AddCommandListener(DoTaunt,        "+taunt");
     
@@ -467,43 +481,21 @@ public OnPluginStart()
     HookConVarChange(cv_Scramble,        CvarChange);
     HookConVarChange(cv_Stalemate,        CvarChange);
     
-    // Find offsets for the damage hook.
-    new Handle:gamedata = LoadGameConfigFile("tfbiohazard.offsets"); 
-    if ( gamedata == INVALID_HANDLE ) SetFailState("Offset gamedata file not found."); 
-    
-    new offset = GameConfGetOffset(gamedata, "OnTakeDamage_Alive");
-    hDamageHook = DHookCreate(offset, HookType_Entity, ReturnType_Int, ThisPointer_CBaseEntity, OnTakeDamage_Alive); 
-    DHookAddParam(hDamageHook, HookParamType_ObjectPtr);
-    
-    ofAttacker = GameConfGetOffset(gamedata, "m_hAttacker");
-    ofInflictor = GameConfGetOffset(gamedata, "m_hInflictor");
-    ofDamage = GameConfGetOffset(gamedata, "m_flDamage");
-    //ofDamageType = GameConfGetOffset(gamedata, "m_iAmmoType");
-    ofWeapon = GameConfGetOffset(gamedata, "m_hWeapon");
-    ofDamageForce = GameConfGetOffset(gamedata, "m_vecDamageForce");
-    ofDamagePosition = GameConfGetOffset(gamedata, "m_vecDamagePosition");
-    ofDamageCustom = GameConfGetOffset(gamedata, "m_iDamageCustom");
-    
-    CloseHandle(gamedata);
-    
     #if DEVELOPER == 1
     RegConsoleCmd("tfbh_debug_showdata", Debug_ShowData, "Outputs player data arrays to the console.", FCVAR_PLUGIN | FCVAR_CHEAT);
     RegConsoleCmd("tfbh_fullrage", Debug_FullRage, "Caller client gets full rage if a zombie.", FCVAR_PLUGIN | FCVAR_CHEAT);
     #endif
     
-    decl String:deb[8];
-    GetConVarDefault(cv_Debug, deb, sizeof(deb));
-    if ( StringToInt(deb) > 0 )
-    {
-        LogMessage("Debug cvar default is not 0! Reset this before release!");
-    }
+    #if defined DEBUG_ALL
+    LogMessage("Debug set to ALL! Reset this before release!");
+    #endif
     
     #if DEVELOPER == 1
     LogMessage("DEVELOPER flag set! Reset this before release!");
     #endif
     
     #if defined PD_DEBUG
-    LogMessage("Player data array debugging compiled in - this will be (marginally) less efficient.");
+    LogMessage("Player data array debugging compiled in - this will be (marginally) less efficient. Remove this before release.");
     #endif
     
     // If we're not enabled, don't set anything up.
@@ -1308,6 +1300,7 @@ public OnClientDisconnect(client)
     if ( g_PluginState & STATE_DISABLED == STATE_DISABLED ) return;
     
     //SDKUnhook(client, SDKHook_OnTakeDamage,        OnTakeDamage);
+    SDKUnhook(client, SDKHook_OnTakeDamageAlive, OnTakeDamageAlive);
     SDKUnhook(client, SDKHook_OnTakeDamagePost,    OnTakeDamagePost);
 }
 
@@ -1319,39 +1312,20 @@ public OnClientPutInServer(client)
     if ( IsClientReplay(client) || IsClientSourceTV(client) ) return;
     
     //SDKHook(client, SDKHook_OnTakeDamage,        OnTakeDamage);        // Hooks when the client takes damage.
+    SDKHook(client, SDKHook_OnTakeDamageAlive, OnTakeDamageAlive);
     SDKHook(client, SDKHook_OnTakeDamagePost,    OnTakeDamagePost);
-    
-    DHookEntity(hDamageHook, false, client); 
 }
 
-/*    Custom OnTakeDamage_Alive hook - this reports damage after spread has been applied.
+/*  OnTakeDamage_Alive hook - this reports damage after spread has been applied.
     BUG: Fists of Steel modify melee damage taken AFTER this hook (fucking...), meaning
     players can die without becoming a zombie.
     Removing them in full for now unless/until we find a way around it.    */
-public MRESReturn:OnTakeDamage_Alive(client, Handle:hReturn, Handle:hParams) 
+public Action:OnTakeDamageAlive(int client, int &attacker, int &inflictor, float &damage, int &damagetype, int &weapon, float damageForce[3], float damagePosition[3], int damagecustom)
 {
-    // <ocd> I might want to clean this up someday... </ocd>
-    
     // Don't bother checking damage values if we're not in a valid round.
     if ( g_PluginState & STATE_DISABLED == STATE_DISABLED ||
             g_PluginState & STATE_NOT_IN_ROUND == STATE_NOT_IN_ROUND ||
-            g_PluginState & STATE_FEW_PLAYERS == STATE_FEW_PLAYERS ) return MRES_Ignored;
-    
-    // Read params:
-    // (OnTakeDamage_Alive passes a struct, hence the param number will always be 1)
-    new attacker = DHookGetParamObjectPtrVar(hParams, 1, ofAttacker, ObjectValueType_Ehandle);
-    new inflictor = DHookGetParamObjectPtrVar(hParams, 1, ofInflictor, ObjectValueType_Ehandle);
-    new Float:damage = DHookGetParamObjectPtrVar(hParams, 1, ofDamage, ObjectValueType_Float);
-    //new damageType = DHookGetParamObjectPtrVar(hParams, 1, ofDamageType, ObjectValueType_Int);
-    new weapon = DHookGetParamObjectPtrVar(hParams, 1, ofWeapon, ObjectValueType_Ehandle);
-    new custom = DHookGetParamObjectPtrVar(hParams, 1, ofDamageCustom, ObjectValueType_Int);
-    
-    // Should these be VectorPtr?
-    new Float:damageForce[3];
-    DHookGetParamObjectPtrVarVector(hParams, 1, ofDamageForce, ObjectValueType_Vector, damageForce);
-    
-    new Float:damagePosition[3];
-    DHookGetParamObjectPtrVarVector(hParams, 1, ofDamagePosition, ObjectValueType_Vector, damagePosition);
+            g_PluginState & STATE_FEW_PLAYERS == STATE_FEW_PLAYERS ) return Plugin_Continue;
     
     new index = _PD_GetClientSlot(client);
     new cvDebug = GetConVarInt(cv_Debug);
@@ -1360,19 +1334,24 @@ public MRESReturn:OnTakeDamage_Alive(client, Handle:hReturn, Handle:hParams)
     // This jumps in before the player actually dies, since it's nigh impossible to respawn the player instantly in the
     // same place using the death hook.
     
-    //if ( cvDebug & DEBUG_ZOMBIFY == DEBUG_ZOMBIFY ) LogMessage("Team %d, damage %f, health %d, attacker %d, attacker team %d, g_Zombie %d", GetClientTeam(client), damage, GetEntProp(client, Prop_Send, "m_iHealth"), attacker, GetClientTeam(attacker), g_Zombie[DataIndexForUserId(GetClientUserId(attacker))]);
-    
     new bool:zombify = true;
     
     // If cv_AlwaysZombify is not set, only attacks specifically caused by a Blue zombie player should cause us to zombify.
-    if ( !GetConVarBool(cv_AlwaysZombify) && (attacker <= 0 || attacker > MaxClients || GetClientTeam(attacker) != TEAM_BLUE || !_PD_IsClientFlagSet(attacker, UsrZombie)) ) zombify = false;
+    if ( !GetConVarBool(cv_AlwaysZombify) && (attacker <= 0 || attacker > MaxClients || GetClientTeam(attacker) != TEAM_BLUE || !_PD_IsClientFlagSet(attacker, UsrZombie)) )
+    {
+        if ( (cvDebug & DEBUG_ZOMBIFY) == DEBUG_ZOMBIFY ) LogMessage("Always zombify set to false and attack was not from a zombie, so not zombifying client %N", client);
+        zombify = false;
+    }
     
     // Don't zombify if setup hasn't finished yet.
-    else if ( (g_PluginState & STATE_AWAITING) == STATE_AWAITING ) zombify = false;
+    else if ( (g_PluginState & STATE_AWAITING) == STATE_AWAITING )
+    {
+        if ( (cvDebug & DEBUG_ZOMBIFY) == DEBUG_ZOMBIFY ) LogMessage("Setup hasn't finished yet, not zombifying client %N.", client);
+        zombify = false;
+    }
     
     if ( GetClientTeam(client) == TEAM_RED && zombify )
     {
-        //PrintToChatAll("Should zombify: damage %f, client %N's health: %d", damage, client, GetEntProp(client, Prop_Send, "m_iHealth"));
         new Float:dmg = damage;
         if ( TF2_GetPlayerClass(client) == TFClass_Spy )
         {
@@ -1382,20 +1361,19 @@ public MRESReturn:OnTakeDamage_Alive(client, Handle:hReturn, Handle:hParams)
         if ( RoundFloat(dmg) >= GetEntProp(client, Prop_Send, "m_iHealth") )    // Must use the player health property here, since g_Health doesn't update until the post hook.
         {
             if ( cvDebug & DEBUG_ZOMBIFY == DEBUG_ZOMBIFY ) LogMessage("Client %N killed by zombie %N", client, attacker);
-            damage = 0.0;
-            DHookSetParamObjectPtrVar(hParams, 1, ofDamage, ObjectValueType_Float, damage);    // Negate the damage.
-            MakeClientZombie2(client);                                                        // Make the client a zombie.
-            BuildZombieMessage(client, attacker, inflictor, DMG_CLUB, weapon);                // Build and fire the death message.
+            damage = 0.0;                                                           // Negate the damage.
+            MakeClientZombie2(client);                                              // Make the client a zombie.
+            BuildZombieMessage(client, attacker, inflictor, DMG_CLUB, weapon);      // Build and fire the death message.
             
             // If the kill was a backstab:
-            if ( custom == TF_CUSTOM_BACKSTAB )
+            if ( damagecustom == TF_CUSTOM_BACKSTAB )
             {
                 // Grant full rage if not already raging.
                 new dataindex = _PD_GetClientSlot(attacker);
                 if ( !_PD_IsFlagSet(dataindex, UsrRaging) ) PD_SetRageLevel(dataindex, 100.0);
             }
             
-            return MRES_ChangedHandled;                                                        // AFAIK ChangedHandled is for changed params, Override is for changed return.
+            return Plugin_Handled;
         }
         else if ( cvDebug & DEBUG_ZOMBIFY == DEBUG_ZOMBIFY ) LogMessage("Damage not enough to kill player.");
     }
@@ -1417,21 +1395,16 @@ public MRESReturn:OnTakeDamage_Alive(client, Handle:hReturn, Handle:hParams)
         }
         else mx = GetConVarFloat(cv_Pushback);
         
-        damageForce[0] = damageForce[0] * mx;    // This method seems to work better...? Might just be me.
-        damageForce[1] = damageForce[1] * mx;
-        damageForce[2] = damageForce[2] * mx;
-        //ScaleVector(damageForce, GetConVarFloat(cv_Pushback));
-        
-        DHookSetParamObjectPtrVarVector(hParams, 1, ofDamageForce, ObjectValueType_Vector, damageForce);    // Override the pushback.
+        ScaleVector(damageForce, mx);
         
         // If the attack was a backstab, grant crits to the attacker.
-        if ( custom == TF_CUSTOM_BACKSTAB )
+        if ( damagecustom == TF_CUSTOM_BACKSTAB )
         {
             TF2_AddCondition(attacker, TFCond_CritOnKill, 5.0);
             TF2_AddCondition(attacker, TFCond_SpeedBuffAlly, 5.0);
         }
         
-        return MRES_ChangedHandled;
+        return Plugin_Handled;
     }
     
     // V Doesn't work. V
@@ -1444,7 +1417,7 @@ public MRESReturn:OnTakeDamage_Alive(client, Handle:hReturn, Handle:hParams)
 //         return MRES_ChangedHandled;
 //     }
     
-    return MRES_Ignored;
+    return Plugin_Continue;
 }
 
 public Action:OnTakeDamagePost(client, &attacker, &inflictor, &Float:damage, &damagetype, &weapon, Float:damageForce[3], Float:damagePosition[3])
@@ -2061,7 +2034,7 @@ stock Cleanup(mode)
                     
                     if ( cvDebug & DEBUG_DATA == DEBUG_DATA ) LogMessage("Client %N has user ID %d and data index %d.", i, GetClientUserId(i), index);
 
-                    DHookEntity(hDamageHook, false, i); 
+                    SDKHook(i, SDKHook_OnTakeDamageAlive, OnTakeDamageAlive);
                     SDKHook(i, SDKHook_OnTakeDamagePost, OnTakeDamagePost);
                     
                     if ( cvDebug & DEBUG_DATA == DEBUG_DATA ) LogMessage("Data at index %d: user ID %d, zombie %d.", index, _PD_GetUserId(index), _PD_IsFlagSet(index, UsrZombie));
