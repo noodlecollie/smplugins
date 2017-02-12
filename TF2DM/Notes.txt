@@ -4,7 +4,7 @@ Players respawn at deathmatch spawn points using the dmspawn plugin (packaged wi
 
 Weapon sets with slots 0-7, ammo provided by pickups.
 Slot 0 is the starting weapon, slots 1-7 are pickups.
-Pickups can either be a specific weapon (which must be defined for each class), a random primary/secondary/melee weapon, a completely random weapon or nothing.
+Pickups specify the weapon for each class.
 
 Example weaponset format in scripts/tf2dm/weaponsets.txt:
 
@@ -15,16 +15,10 @@ Example weaponset format in scripts/tf2dm/weaponsets.txt:
 		"name"	"Weaponset Name"				// Descriptive name of the weapon set, used in menus.
 		"slot"									// Specifies that slot data is contained below.
 		{
-			"id"	"0"							// Specifies the slot number. Will override configs for previously defined slots.
-			"heavyweapons"						// Specifies data relating to a specific class (same identifiers as tf_bot). "all" specifies all classes and cannot use specific weapons (specific will default to random).
-			{
-				"weapon"	"WEAPON_PRIMARY  WEAPON_SECONDARY"	// Multiple flags of WEAPON_SPECIFIC, _PRIMARY, _SECONDARY, _MELEE, _RANDOM or _NONE, separated by spaces. WEAPON_SPECIFIC overrides all other flags.
-				"index"		"100"								// Only used with WEAPON_SPECIFIC; contains the item definition index to use for the weapon.
-																// Multiple indices can be specified, separated with spaces, and a random index will be chosen.
-			}
-			
-			"soldier"							// Class descriptors continue in the same fashion.
-			...
+			"id"	        "0"					// Specifies the slot number. Will override configs for previously defined slots.
+			"heavyweapons"  "100"				// Specifies the item definition index for the given class.
+			"soldier"       "200"				// Class descriptors continue in the same fashion.
+            ...
 		}
 		
 		"slot"									// Slot descriptors continue in the same fashion. Undefined slots are assumed to be empty and will not be used.

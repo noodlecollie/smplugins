@@ -36,7 +36,7 @@ public void PCtl_Initialise(const char[] strPluginIdent, const char[] strPluginV
 {
     if ( isValid() )
     {
-        ThrowError("PluginCtl: Already initialised for plugin.");
+        ThrowError("PluginCtl: Already initialised for plugin '%s'.", _strPluginIdent);
     }
     
     strcopy(_strPluginIdent, sizeof(_strPluginIdent), strPluginIdent);

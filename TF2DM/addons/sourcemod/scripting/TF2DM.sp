@@ -14,25 +14,30 @@
 #include "pluginctl/pluginctl.inc"
 
 #include "include/plugininfo.inc"
+#include "include/weaponsetreader.inc"
 
 #pragma semicolon 1
 #pragma newdecls required
 
 public void OnPluginStart()
 {
-	LogMessage("========== %s [v%s] ==========", PLUGIN_NAME, PLUGIN_VERSION);
-	
-	PCtl_Initialise("tfdm", PLUGIN_VERSION, OnPluginEnabledStateChanged);
+    LogMessage("========== %s [v%s] ==========", PLUGIN_NAME, PLUGIN_VERSION);
+    
+    PCtl_Initialise("tf2dm", PLUGIN_VERSION, OnPluginEnabledStateChanged);
+    WepSetRx_Initialise();
+    
+    PCtl_PerformPluginLoadTasks();
 }
 
 public void OnPluginEnd()
 {
-	LogMessage("Shutting down.");
-	
-	PCtl_Shutdown(OnPluginEnabledStateChanged);
+    LogMessage("Shutting down.");
+    
+    WepSetRx_Shutdown();
+    PCtl_Shutdown(OnPluginEnabledStateChanged);
 }
 
 public void OnPluginEnabledStateChanged(ConVar convar, const char[] oldValue, const char[] newValue)
 {
-	
+    
 }
