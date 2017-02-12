@@ -37,7 +37,7 @@ public Action WepSetRxCmds_CommandDumpRequested(int nClient, int nArgs)
     GetCmdArg(1, strArgWeaponSet, sizeof(strArgWeaponSet));
     
     int nWeaponSet = StringToInt(strArgWeaponSet);
-    if ( nWeaponSet < 0 || nWeaponSet > MAX_WEAPONSETS )
+    if ( nWeaponSet < 0 || nWeaponSet >= MAX_WEAPONSETS )
     {
         PrintToConsole(nClient, "Weaponset index of '%i' out of range [0-%i].", nWeaponSet, MAX_WEAPONSETS-1);
         return Plugin_Handled;
@@ -69,6 +69,17 @@ public Action WepSetRxCmds_CommandDumpRequested(int nClient, int nArgs)
             PrintToConsole(nClient, "Class '%s' unrecognised.", strArgClass);
             return Plugin_Handled;
         }
+    }
+    
+    char strWeaponSetName[MAX_WEAPONSET_NAME_LENGTH] = "";
+    WepSetRxCore_GetWeaponSetDescriptiveName(nWeaponSet, strWeaponSetName, sizeof(strWeaponSetName));
+    if ( strlen(strWeaponSetName) < 1 )
+    {
+        PrintToConsole(nClient, "Unnamed weapon set");
+    }
+    else
+    {
+        PrintToConsole(nClient, "'%s'", strWeaponSetName);
     }
     
     switch ( nArgs )

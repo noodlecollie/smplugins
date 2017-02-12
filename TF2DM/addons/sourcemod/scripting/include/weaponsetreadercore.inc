@@ -82,7 +82,7 @@ stock void Populate(KeyValues kvNode)
     {
         if ( _nWeaponSetCount >= MAX_WEAPONSETS )
         {
-            LogError("WeaponSetReader: Number of weapon sets exceeds maximum count of %n, truncating.", MAX_WEAPONSETS);
+            LogError("WeaponSetReader: Number of weapon sets exceeds maximum count of %i, truncating.", MAX_WEAPONSETS);
             break;
         }
         
@@ -93,7 +93,7 @@ stock void Populate(KeyValues kvNode)
             int nDummyValue = 0;
             if ( smStoredWeaponSets.GetValue(buffer, nDummyValue) )
             {
-                LogError("WeaponSetReader: Duplicate weapon set with identifier '%1'.", buffer);
+                LogError("WeaponSetReader: Duplicate weapon set with identifier '%s'.", buffer);
                 continue;
             }
         }
@@ -117,13 +117,13 @@ stock void PopulateWeaponSet(int nWeaponSet, KeyValues kvNode)
         int nSlotId = kvNode.GetNum("id", -1);
         if ( nSlotId < 0 )
         {
-            LogError("WeaponSetReader: Slot within weaponset %n has no ID.", nWeaponSet);
+            LogError("WeaponSetReader: Slot within weaponset %i has no ID.", nWeaponSet);
             continue;
         }
         
         if ( nSlotId >= MAX_WEAPONSET_SLOTS )
         {
-            LogError("WeaponSetReader: Slot %n is greater than maximum slot index %n.", nSlotId, MAX_WEAPONSET_SLOTS);
+            LogError("WeaponSetReader: Slot %i is greater than maximum slot index %i.", nSlotId, MAX_WEAPONSET_SLOTS);
             continue;
         }
         
@@ -136,7 +136,7 @@ stock void PopulateWeaponSet(int nWeaponSet, KeyValues kvNode)
 stock void StoreWeaponSetDescriptiveName(KeyValues kvNode)
 {
     char strDefaultName[MAX_WEAPONSET_NAME_LENGTH];
-    Format(strDefaultName, sizeof(strDefaultName), "Weaponset %n", _nWeaponSetCount+1);
+    Format(strDefaultName, sizeof(strDefaultName), "Weaponset %i", _nWeaponSetCount+1);
     
     char buffer[MAX_WEAPONSET_NAME_LENGTH];
     kvNode.GetString("name", buffer, sizeof(buffer), strDefaultName);
@@ -166,6 +166,11 @@ stock void SetItemIndex(int nWeaponSet, int nSlot, TFClassType nClass, int nItem
 public int WepSetRxCore_GetItemIndex(int nWeaponSet, int nSlot, TFClassType nClass)
 {
     return _nWeaponSets[nWeaponSet][nSlot][view_as<int>(nClass)-1];
+}
+
+public void WepSetRxCore_GetWeaponSetDescriptiveName(int nWeaponSet, char[] strBuffer, int nLength)
+{
+    strcopy(strBuffer, nLength, _strWeaponSetNames[nWeaponSet]);
 }
 
 stock void ClearWeaponSets()
