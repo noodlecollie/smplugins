@@ -146,7 +146,7 @@ stock void StoreWeaponSetDescriptiveName(KeyValues kvNode)
 
 stock void PopulateSlot(int nWeaponSet, int nSlot, KeyValues kvNode)
 {
-    for ( TFClassType nClass = TFClass_Scout; nClass <= TFClass_Engineer; ++nClass )
+    for ( TFClassType nClass = TFCLASS_LOWER_BOUND; nClass <= TFCLASS_UPPER_BOUND; ++nClass )
     {
         SetItemIndexFromKV(nWeaponSet, nSlot, nClass, kvNode);
     }

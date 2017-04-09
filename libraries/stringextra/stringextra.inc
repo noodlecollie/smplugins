@@ -32,8 +32,10 @@ enum StringCase
 public void StrEx_ToCase(char[] strDest, int nDestLength, const char[] strSource, StringCase nCase)
 {
     strcopy(strDest, nDestLength, strSource);
+    int nSourceLength = strlen(strSource);
+    int nMinLength = nDestLength < nSourceLength ? nDestLength : nSourceLength;
     
-    for ( int i = 0; i < nDestLength; ++i )
+    for ( int i = 0; i < nMinLength; ++i )
     {
         strDest[i] = nCase == StrEx_Uppercase ? CharToUpper(strDest[i]) : CharToLower(strDest[i]);
     }
