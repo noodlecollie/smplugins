@@ -10,6 +10,8 @@
 #include <tf2>
 #include <adt_trie>
 
+#include "tf2extra/tf2extra.inc"
+
 #define MAX_WEAPONSETS 8
 #define MAX_WEAPONSET_SLOTS 8
 #define WEAPONSET_CLASS_COUNT 9
@@ -19,19 +21,6 @@
 #define TFCLASS_UPPER_BOUND TFClass_Engineer
 
 #define INVALID_WEAPON_INDEX -1
-
-static const char _nClassNames[WEAPONSET_CLASS_COUNT][16] =
-{
-    "scout",
-    "sniper",
-    "soldier",
-    "demoman",
-    "medic",
-    "heavy",
-    "pyro",
-    "spy",
-    "engineer"
-};
 
 static int _nWeaponSets[MAX_WEAPONSETS][MAX_WEAPONSET_SLOTS][WEAPONSET_CLASS_COUNT];
 static char _strWeaponSetNames[MAX_WEAPONSETS][MAX_WEAPONSET_NAME_LENGTH];
@@ -45,6 +34,16 @@ public void WepSetRxCore_Initialise()
 public void WepSetRxCore_Shutdown()
 {
     
+}
+
+public int WepSetRxCore_GetItemIndex(int nWeaponSet, int nSlot, TFClassType nClass)
+{
+    return _nWeaponSets[nWeaponSet][nSlot][view_as<int>(nClass)-1];
+}
+
+public void WepSetRxCore_GetWeaponSetDescriptiveName(int nWeaponSet, char[] strBuffer, int nLength)
+{
+    strcopy(strBuffer, nLength, _strWeaponSetNames[nWeaponSet]);
 }
 
 public bool WepSetRxCore_ReadWeaponSets(const char[] strFileName)
@@ -154,23 +153,13 @@ stock void PopulateSlot(int nWeaponSet, int nSlot, KeyValues kvNode)
 
 stock void SetItemIndexFromKV(int nWeaponSet, int nSlot, TFClassType nClass, KeyValues kvNode)
 {
-    int nItemIndex = kvNode.GetNum(_nClassNames[view_as<int>(nClass)-1], INVALID_WEAPON_INDEX);
+    int nItemIndex = kvNode.GetNum(TF2Ex_ClassName[view_as<int>(nClass)], INVALID_WEAPON_INDEX);
     SetItemIndex(nWeaponSet, nSlot, nClass, nItemIndex);
 }
 
 stock void SetItemIndex(int nWeaponSet, int nSlot, TFClassType nClass, int nItemIndex)
 {
     _nWeaponSets[nWeaponSet][nSlot][view_as<int>(nClass)-1] = nItemIndex;
-}
-
-public int WepSetRxCore_GetItemIndex(int nWeaponSet, int nSlot, TFClassType nClass)
-{
-    return _nWeaponSets[nWeaponSet][nSlot][view_as<int>(nClass)-1];
-}
-
-public void WepSetRxCore_GetWeaponSetDescriptiveName(int nWeaponSet, char[] strBuffer, int nLength)
-{
-    strcopy(strBuffer, nLength, _strWeaponSetNames[nWeaponSet]);
 }
 
 stock void ClearWeaponSets()

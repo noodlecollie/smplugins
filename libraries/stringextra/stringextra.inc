@@ -35,8 +35,18 @@ public void StrEx_ToCase(char[] strDest, int nDestLength, const char[] strSource
     int nSourceLength = strlen(strSource);
     int nMinLength = nDestLength < nSourceLength ? nDestLength : nSourceLength;
     
-    for ( int i = 0; i < nMinLength; ++i )
+    if ( nCase == StrEx_Uppercase )
     {
-        strDest[i] = nCase == StrEx_Uppercase ? CharToUpper(strDest[i]) : CharToLower(strDest[i]);
+        for ( int i = 0; i < nMinLength; ++i )
+        {
+            strDest[i] = CharToUpper(strDest[i]);
+        }
+    }
+    else
+    {
+        for ( int i = 0; i < nMinLength; ++i )
+        {
+            strDest[i] = CharToLower(strDest[i]);
+        }
     }
 }

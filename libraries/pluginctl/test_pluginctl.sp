@@ -19,10 +19,10 @@ public void OnPluginStart()
 {
     _bPluginEnabledState = true;
     LogMessage("[TEST] PluginCTL test suite running...");
-	
+    
     Test(PCtl_PluginVersion() == null, "Plugin version convar was not initially null.");
     Test(PCtl_PluginEnabled() == null, "Plugin enabled convar was not initially null.");
-	
+    
     PCtl_Initialise("tst", "1.2.3.4", OnPluginEnabledStateChanged);
     Test(PCtl_PluginVersion() != null, "Plugin version convar was null after initialisation.");
     Test(PCtl_PluginEnabled() != null, "Plugin enabled convar was null after initialisation.");
@@ -53,8 +53,8 @@ public void OnPluginEnabledStateChanged(ConVar convar, const char[] oldValue, co
 
 void Test(bool bResult, const char[] strError)
 {
-	if ( !bResult )
-	{
-		ThrowError(strError);
-	}
+    if ( !bResult )
+    {
+        ThrowError(strError);
+    }
 }

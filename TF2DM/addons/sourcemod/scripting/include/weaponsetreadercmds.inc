@@ -43,10 +43,10 @@ public Action WepSetRxCmds_CommandDumpRequested(int nClient, int nArgs)
         return Plugin_Handled;
     }
     
-    char strArgSlot[16] = "";
     int nSlot = -1;
     if ( nArgs >= 2 )
     {
+        char strArgSlot[16] = "";
         GetCmdArg(2, strArgSlot, sizeof(strArgSlot));
         nSlot = StringToInt(strArgSlot);
         
@@ -57,10 +57,10 @@ public Action WepSetRxCmds_CommandDumpRequested(int nClient, int nArgs)
         }
     }
     
-    char strArgClass[16] = "";
     TFClassType nClass = TFClass_Unknown;
     if ( nArgs >= 3 )
     {
+        char strArgClass[16] = "";
         GetCmdArg(3, strArgClass, sizeof(strArgClass));
         nClass = TF2_GetClass(strArgClass);
         
@@ -133,11 +133,8 @@ stock void PrintAllClassIndexes(int nClient, int nWeaponSet, int nSlot)
 
 stock void PrintWeaponSetRecordToConsole(int nClient, int nWeaponSet, int nSlot, TFClassType nClass)
 {
-    char strClassName[16];
-    TF2Ex_GetClassName(nClass, strClassName, sizeof(strClassName));
-    
     int nWeaponDefIndex = WepSetRxCore_GetItemIndex(nWeaponSet, nSlot, nClass);
     bool bShouldTabExtra = nClass != TFClass_Heavy && nClass != TFClass_Engineer;
     
-    PrintToConsole(nClient, "%i\t%i\t%s%s\t%i", nWeaponSet, nSlot, strClassName, bShouldTabExtra ? "\t" : "", nWeaponDefIndex);
+    PrintToConsole(nClient, "%i\t%i\t%s%s\t%i", nWeaponSet, nSlot, TF2Ex_ClassName[nClass], bShouldTabExtra ? "\t" : "", nWeaponDefIndex);
 }

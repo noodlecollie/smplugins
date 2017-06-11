@@ -20,7 +20,7 @@ static ConVar _cvPluginEnabled = null;
 
 stock bool isValid()
 {
-	return _cvPluginVersion != null;
+    return _cvPluginVersion != null;
 }
 
 /**
@@ -86,7 +86,7 @@ public void PCtl_Shutdown(ConVarChanged cbEnabledChangedUnhook)
  */
 public ConVar PCtl_PluginVersion()
 {
-	return _cvPluginVersion;
+    return _cvPluginVersion;
 }
 
 /**
@@ -96,7 +96,7 @@ public ConVar PCtl_PluginVersion()
  */
 public ConVar PCtl_PluginEnabled()
 {
-	return _cvPluginEnabled;
+    return _cvPluginEnabled;
 }
 
 /**
@@ -109,7 +109,12 @@ public ConVar PCtl_PluginEnabled()
  */
 public void PCtl_PluginIdent(char[] strBuffer, int nMaxLength)
 {
-	strcopy(strBuffer, nMaxLength, _strPluginIdent);
+    if ( !isValid() )
+    {
+        return;
+    }
+    
+    strcopy(strBuffer, nMaxLength, _strPluginIdent);
 }
 
 /**
@@ -124,7 +129,7 @@ public void PCtl_PerformPluginLoadTasks()
 {
     if ( !isValid() )
     {
-    	return;
+        return;
     }
     
     LoadTranslations("common.phrases");

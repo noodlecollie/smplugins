@@ -12,7 +12,7 @@
 
 #include <tf2>
 
-static const char _strClassNames[][] =
+public const char TF2Ex_ClassName[][] =
 {
     "unknown",
     "scout",
@@ -25,13 +25,3 @@ static const char _strClassNames[][] =
     "spy",
     "engineer"
 };
-
-public void TF2Ex_GetClassName(TFClassType nClass, char[] strBuffer, int nLength)
-{
-    if ( nClass < TFClass_Unknown || nClass > TFClass_Engineer )
-    {
-        ThrowError("TF2Ex: Unrecognised class '%i'.", nClass);
-    }
-    
-    strcopy(strBuffer, nLength, _strClassNames[nClass]);
-}
