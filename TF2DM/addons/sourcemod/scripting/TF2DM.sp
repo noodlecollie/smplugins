@@ -19,6 +19,11 @@
 #pragma semicolon 1
 #pragma newdecls required
 
+static const char _RequiredLibraries[][] =
+{
+    "tf2idb",
+};
+
 public void OnPluginStart()
 {
     LogMessage("========== %s [v%s] ==========", PLUGIN_NAME, PLUGIN_VERSION);
@@ -35,6 +40,11 @@ public void OnPluginEnd()
     
     WepSetRx_Shutdown();
     PCtl_Shutdown(OnPluginEnabledStateChanged);
+}
+
+public void OnAllPluginsLoaded()
+{
+    PCtl_EnsureDependenciesExist(_RequiredLibraries, sizeof(_RequiredLibraries));
 }
 
 public void OnPluginEnabledStateChanged(ConVar convar, const char[] oldValue, const char[] newValue)

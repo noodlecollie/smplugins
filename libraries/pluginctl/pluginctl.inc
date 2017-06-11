@@ -10,18 +10,16 @@
 #pragma semicolon 1
 #pragma newdecls required
 
+#include <sourcemod>
+
 #include "stringextra/stringextra.inc"
 
 #define PCTL_PLUGIN_IDENT_MAX_LENGTH 16
+#define PCTL_PLUGIN_LIBRARIES_MAX_LENGTH 256
 
 static char _strPluginIdent[PCTL_PLUGIN_IDENT_MAX_LENGTH] = "";
 static ConVar _cvPluginVersion = null;
 static ConVar _cvPluginEnabled = null;
-
-stock bool isValid()
-{
-    return _cvPluginVersion != null;
-}
 
 /**
  * Initialises the global data for this plugin.
@@ -141,4 +139,29 @@ public void PCtl_PerformPluginLoadTasks()
     
     Format(buffer, sizeof(buffer), "sourcemod/%s", _strPluginIdent);
     AutoExecConfig(true, _strPluginIdent, buffer);
+}
+
+/**
+ * Checks all the required libraries exist, and sets a failure state if any do not.
+ * This should be called from OnAllPluginsLoaded().
+ *
+ * @param libraries Array of library name strings to check for.
+ * @param count The total number of strings in the array.
+ *
+ * @noreturn
+ */
+public void PCtl_EnsureDependenciesExist(const char[][] libraries, int count)
+{
+    for ( int library = 0; library < count; ++library )
+    {
+        if ( !LibraryExists(libraries[library]) )
+        {
+            SetFailState("PluginCtl: Required library '%s' not found.");
+        }
+    }
+}
+
+stock bool isValid()
+{
+    return _cvPluginVersion != null;
 }
