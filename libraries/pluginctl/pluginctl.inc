@@ -21,8 +21,17 @@ static char _strPluginIdent[PCTL_PLUGIN_IDENT_MAX_LENGTH] = "";
 static ConVar _cvPluginVersion = null;
 static ConVar _cvPluginEnabled = null;
 
+// This is only set on Initialise(), and should be considered undefined
+// if isValid() returns false. This is because a function pointer can't
+// be set to null.
+static ConVarChanged _cbEnabledChanged;
+
 /**
  * Initialises the global data for this plugin.
+ *
+ * Translations are loaded automatically. This process assumes that for a plugin with a given IDENT:
+ * - Translated phrases are contained within translations/IDENT/IDENT_phrases.txt
+ * - Plugin config is located at cfg/sourcemod/IDENT/IDENT.cfg
  *
  * @param strPluginIdent    Unique identifier for this plugin. Cannot be longer than PCTL_PLUGIN_IDENT_MAX_LENGTH.
  * @param strPluginVersion  Version string for this plugin. Recommended format is "maj.min.rev.build".
@@ -54,24 +63,25 @@ public void PCtl_Initialise(const char[] strPluginIdent, const char[] strPluginV
     _cvPluginVersion = CreateConVar(strBuffer, strPluginVersion, "Plugin version.",
         FCVAR_CHEAT);
 
-    _cvPluginEnabled.AddChangeHook(cbEnabledChanged);
+    _cbEnabledChanged = cbEnabledChanged;
+    _cvPluginEnabled.AddChangeHook(_cbEnabledChanged);
+
+    PerformPluginLoadTasks();
 }
 
 /**
  * Cleans up the global data for this plugin.
  *
- * @param cbEnabledChangedUnhook    Callback to unhook from the plugin enabled state convar, as passed to PCtl_Initialise.
- *
  * @noreturn
  */
-public void PCtl_Shutdown(ConVarChanged cbEnabledChangedUnhook)
+public void PCtl_Shutdown()
 {
     if ( !isValid() )
     {
         return;
     }
 
-    _cvPluginEnabled.RemoveChangeHook(cbEnabledChangedUnhook);
+    _cvPluginEnabled.RemoveChangeHook(_cbEnabledChanged);
 
     delete _cvPluginEnabled;
     delete _cvPluginVersion;
@@ -116,32 +126,6 @@ public void PCtl_PluginIdent(char[] strBuffer, int nMaxLength)
 }
 
 /**
- * Loads translations for the plugin.
- * This process assumes that for a plugin with a given IDENT:
- * - Translated phrases are contained within translations/IDENT/IDENT_phrases.txt
- * - Plugin config is located at cfg/sourcemod/IDENT/IDENT.cfg
- *
- * @noreturn
- */
-public void PCtl_PerformPluginLoadTasks()
-{
-    if ( !isValid() )
-    {
-        return;
-    }
-
-    LoadTranslations("common.phrases");
-
-    char buffer[64];
-
-    Format(buffer, sizeof(buffer), "%s/%s_phrases", _strPluginIdent, _strPluginIdent);
-    LoadTranslations(buffer);
-
-    Format(buffer, sizeof(buffer), "sourcemod/%s", _strPluginIdent);
-    AutoExecConfig(true, _strPluginIdent, buffer);
-}
-
-/**
  * Checks all the required libraries exist, and sets a failure state if any do not.
  * This should be called from OnAllPluginsLoaded().
  *
@@ -164,4 +148,32 @@ public void PCtl_EnsureDependenciesExist(const char[][] libraries, int count)
 stock bool isValid()
 {
     return _cvPluginVersion != null;
+}
+
+
+stock void PerformPluginLoadTasks()
+{
+    LoadTranslations("common.phrases");
+
+    char buffer[64];
+
+    Format(buffer, sizeof(buffer), "%s/%s_phrases", _strPluginIdent, _strPluginIdent);
+    if ( FileExists(buffer, false, NULL_STRING) )
+    {
+        LoadTranslations(buffer);
+    }
+    else
+    {
+        LogMessage("Translations file %s not found, not loading.", buffer);
+    }
+
+    Format(buffer, sizeof(buffer), "sourcemod/%s", _strPluginIdent);
+    if ( FileExists(buffer, false, NULL_STRING) )
+    {
+        AutoExecConfig(true, _strPluginIdent, buffer);
+    }
+    else
+    {
+        LogMessage("Plugin config %s not found, not executing.");
+    }
 }
