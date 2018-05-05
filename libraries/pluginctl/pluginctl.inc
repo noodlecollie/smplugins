@@ -45,6 +45,12 @@ void PCtl_Initialise(const char[] strPluginIdent, const char[] strPluginVersion,
         ThrowError("PluginCtl: Already initialised for plugin '%s'.", _strPluginIdent);
     }
 
+    int identLength = strlen(strPluginIdent);
+    if ( identLength < 1 || identLength >= PCTL_PLUGIN_IDENT_MAX_LENGTH )
+    {
+        ThrowError("PluginCtl: Plugin ident '%s' was %s.", strPluginIdent, identLength < 1 ? "empty" : "too long");
+    }
+
     strcopy(_strPluginIdent, sizeof(_strPluginIdent), strPluginIdent);
 
     char strPluginIdentLower[PCTL_PLUGIN_IDENT_MAX_LENGTH];
@@ -93,6 +99,11 @@ void PCtl_Shutdown()
  */
 stock ConVar PCtl_PluginVersion()
 {
+    if ( !isValid() )
+    {
+        ThrowError("PluginCtl: Not initialised.");
+    }
+
     return _cvPluginVersion;
 }
 
@@ -103,6 +114,11 @@ stock ConVar PCtl_PluginVersion()
  */
 stock ConVar PCtl_PluginEnabled()
 {
+    if ( !isValid() )
+    {
+        ThrowError("PluginCtl: Not initialised.");
+    }
+
     return _cvPluginEnabled;
 }
 
@@ -118,7 +134,7 @@ stock void PCtl_PluginIdent(char[] strBuffer, int nMaxLength)
 {
     if ( !isValid() )
     {
-        return;
+        ThrowError("PluginCtl: Not initialised.");
     }
 
     strcopy(strBuffer, nMaxLength, _strPluginIdent);
@@ -144,11 +160,37 @@ stock void PCtl_EnsureDependenciesExist(const char[][] libraries, int count)
     }
 }
 
+stock ConVar PCtl_CreatePrefixedConVar(const char[] strName,
+                                       const char[] strDefaultValue,
+                                       const char[] strDescription = "",
+                                       int nFlags = 0,
+                                       bool bHasMin = false,
+                                       float fMin = 0.0,
+                                       bool bHasMax = false,
+                                       float fMax = 0.0)
+{
+    if ( !isValid() )
+    {
+        ThrowError("PluginCtl: Not initialised.");
+    }
+
+    char buffer[PCTL_PLUGIN_IDENT_MAX_LENGTH + 64];
+    FormatEx(buffer, sizeof(buffer), "%s_%s", _strPluginIdent, strName);
+
+    ConVar cVar = CreateConVar(buffer, strDefaultValue, strDescription, nFlags, bHasMin, fMin, bHasMax, fMax);
+
+    if ( cVar == null )
+    {
+        ThrowError("PluginCtl: Unable to create ConVar %s.", buffer);
+    }
+
+    return cVar;
+}
+
 static stock bool isValid()
 {
     return _cvPluginVersion != null;
 }
-
 
 static stock void PerformPluginLoadTasks()
 {
