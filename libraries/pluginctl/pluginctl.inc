@@ -15,7 +15,6 @@
 #include "stringextra/stringextra.inc"
 
 #define PCTL_PLUGIN_IDENT_MAX_LENGTH 16
-#define PCTL_PLUGIN_LIBRARIES_MAX_LENGTH 256
 
 static char _strPluginIdent[PCTL_PLUGIN_IDENT_MAX_LENGTH] = "";
 static ConVar _cvPluginVersion = null;
@@ -39,7 +38,7 @@ static ConVarChanged _cbEnabledChanged;
  *
  * @noreturn
  */
-public void PCtl_Initialise(const char[] strPluginIdent, const char[] strPluginVersion, ConVarChanged cbEnabledChanged)
+void PCtl_Initialise(const char[] strPluginIdent, const char[] strPluginVersion, ConVarChanged cbEnabledChanged)
 {
     if ( isValid() )
     {
@@ -74,7 +73,7 @@ public void PCtl_Initialise(const char[] strPluginIdent, const char[] strPluginV
  *
  * @noreturn
  */
-public void PCtl_Shutdown()
+void PCtl_Shutdown()
 {
     if ( !isValid() )
     {
@@ -92,7 +91,7 @@ public void PCtl_Shutdown()
  *
  * @return Version convar.
  */
-public ConVar PCtl_PluginVersion()
+stock ConVar PCtl_PluginVersion()
 {
     return _cvPluginVersion;
 }
@@ -102,7 +101,7 @@ public ConVar PCtl_PluginVersion()
  *
  * @return Enabled state convar.
  */
-public ConVar PCtl_PluginEnabled()
+stock ConVar PCtl_PluginEnabled()
 {
     return _cvPluginEnabled;
 }
@@ -115,7 +114,7 @@ public ConVar PCtl_PluginEnabled()
  *
  * @noreturn
  */
-public void PCtl_PluginIdent(char[] strBuffer, int nMaxLength)
+stock void PCtl_PluginIdent(char[] strBuffer, int nMaxLength)
 {
     if ( !isValid() )
     {
@@ -134,7 +133,7 @@ public void PCtl_PluginIdent(char[] strBuffer, int nMaxLength)
  *
  * @noreturn
  */
-public void PCtl_EnsureDependenciesExist(const char[][] libraries, int count)
+stock void PCtl_EnsureDependenciesExist(const char[][] libraries, int count)
 {
     for ( int library = 0; library < count; ++library )
     {
@@ -145,13 +144,13 @@ public void PCtl_EnsureDependenciesExist(const char[][] libraries, int count)
     }
 }
 
-stock bool isValid()
+static stock bool isValid()
 {
     return _cvPluginVersion != null;
 }
 
 
-stock void PerformPluginLoadTasks()
+static stock void PerformPluginLoadTasks()
 {
     LoadTranslations("common.phrases");
 
@@ -174,6 +173,6 @@ stock void PerformPluginLoadTasks()
     }
     else
     {
-        LogMessage("Plugin config %s not found, not executing.");
+        LogMessage("Plugin config %s not found, not executing.", buffer);
     }
 }
