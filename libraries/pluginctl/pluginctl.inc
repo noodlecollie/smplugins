@@ -36,24 +36,24 @@ public void PCtl_Initialise(const char[] strPluginIdent, const char[] strPluginV
     {
         ThrowError("PluginCtl: Already initialised for plugin '%s'.", _strPluginIdent);
     }
-    
+
     strcopy(_strPluginIdent, sizeof(_strPluginIdent), strPluginIdent);
-    
+
     char strPluginIdentLower[PCTL_PLUGIN_IDENT_MAX_LENGTH];
     StrEx_ToCase(strPluginIdentLower, sizeof(strPluginIdentLower), _strPluginIdent, StrEx_Lowercase);
-    
+
     char strBuffer[64];
-    
+
     Format(strBuffer, sizeof(strBuffer), "%s_enabled", strPluginIdentLower);
     _cvPluginEnabled = CreateConVar(strBuffer, "1", "Enables or disables the plugin.",
         FCVAR_ARCHIVE | FCVAR_NOTIFY,
         true, 0.0,
         true, 1.0);
-    
+
     Format(strBuffer, sizeof(strBuffer), "%s_version", strPluginIdentLower);
     _cvPluginVersion = CreateConVar(strBuffer, strPluginVersion, "Plugin version.",
         FCVAR_CHEAT);
-    
+
     _cvPluginEnabled.AddChangeHook(cbEnabledChanged);
 }
 
@@ -70,9 +70,9 @@ public void PCtl_Shutdown(ConVarChanged cbEnabledChangedUnhook)
     {
         return;
     }
-    
+
     _cvPluginEnabled.RemoveChangeHook(cbEnabledChangedUnhook);
-    
+
     delete _cvPluginEnabled;
     delete _cvPluginVersion;
 }
@@ -111,7 +111,7 @@ public void PCtl_PluginIdent(char[] strBuffer, int nMaxLength)
     {
         return;
     }
-    
+
     strcopy(strBuffer, nMaxLength, _strPluginIdent);
 }
 
@@ -129,14 +129,14 @@ public void PCtl_PerformPluginLoadTasks()
     {
         return;
     }
-    
+
     LoadTranslations("common.phrases");
-    
+
     char buffer[64];
-    
+
     Format(buffer, sizeof(buffer), "%s/%s_phrases", _strPluginIdent, _strPluginIdent);
     LoadTranslations(buffer);
-    
+
     Format(buffer, sizeof(buffer), "sourcemod/%s", _strPluginIdent);
     AutoExecConfig(true, _strPluginIdent, buffer);
 }
@@ -156,7 +156,7 @@ public void PCtl_EnsureDependenciesExist(const char[][] libraries, int count)
     {
         if ( !LibraryExists(libraries[library]) )
         {
-            SetFailState("PluginCtl: Required library '%s' not found.");
+            SetFailState("PluginCtl: Required library '%s' not found.", libraries[library]);
         }
     }
 }
