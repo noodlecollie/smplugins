@@ -13,7 +13,7 @@
 #include <sourcemod>
 #include <dynamic>
 
-typedef ClientRecord_InitFunc = function void(Dynamic &item);
+typedef ClientRecord_InitFunc = function void(int client, Dynamic &item);
 
 static Dynamic _records[MAXPLAYERS] = { INVALID_DYNAMIC_OBJECT, ... };
 static Handle _fwdConstructor = INVALID_HANDLE;
@@ -33,7 +33,7 @@ void ClientRecords_Initialise(ClientRecord_InitFunc constructor)
         ThrowError("ClientRecords: Already initialised.");
     }
 
-    _fwdConstructor = CreateForward(ET_Ignore, Param_CellByRef);
+    _fwdConstructor = CreateForward(ET_Ignore, Param_Cell, Param_CellByRef);
     AddToForward(_fwdConstructor, INVALID_HANDLE, constructor);
 
     // Just in case this was called during a game, make sure we initialise
@@ -76,65 +76,66 @@ void ClientRecords_Destroy()
     _bInitialised = false;
 }
 
-void ClientRecords_NotifyClientConnected(int index)
+void ClientRecords_NotifyClientConnected(int client)
 {
     if ( !_bInitialised )
     {
         ThrowError("ClientRecords: Not initialised.");
     }
 
-    if ( index < 1 || index >= MAXPLAYERS )
+    if ( client < 1 || client >= MAXPLAYERS )
     {
-        ThrowError("ClientRecords: Client index %d is out of range.", index);
+        ThrowError("ClientRecords: Client index %d is out of range.", client);
     }
 
-    if ( _records[index].IsValid )
+    if ( _records[client].IsValid )
     {
-        _records[index].Dispose();
+        _records[client].Dispose();
     }
 
-    _records[index] = INVALID_DYNAMIC_OBJECT;
+    _records[client] = INVALID_DYNAMIC_OBJECT;
 
     Call_StartForward(_fwdConstructor);
-    Call_PushCellRef(_records[index]);
+    Call_PushCell(client);
+    Call_PushCellRef(_records[client]);
     Call_Finish();
 
-    if (_records[index] == INVALID_DYNAMIC_OBJECT )
+    if (_records[client] == INVALID_DYNAMIC_OBJECT )
     {
-        ThrowError("ClientRecords: Record %d was not correctly initialised.", index);
+        ThrowError("ClientRecords: Record for client %d was not correctly initialised.", client);
     }
 }
 
-void ClientRecords_NotifyClientDisconnected(int index)
+void ClientRecords_NotifyClientDisconnected(int client)
 {
     if ( !_bInitialised )
     {
         ThrowError("ClientRecords: Not initialised.");
     }
 
-    if ( index < 1 || index >= MAXPLAYERS )
+    if ( client < 1 || client >= MAXPLAYERS )
     {
-        ThrowError("ClientRecords: Client index %d is out of range.", index);
+        ThrowError("ClientRecords: Client index %d is out of range.", client);
     }
 
-    if ( _records[index].IsValid )
+    if ( _records[client].IsValid )
     {
-        _records[index].Dispose();
-        _records[index] = INVALID_DYNAMIC_OBJECT;
+        _records[client].Dispose();
+        _records[client] = INVALID_DYNAMIC_OBJECT;
     }
 }
 
-stock Dynamic ClientRecords_GetRecord(int index)
+stock Dynamic ClientRecords_GetRecord(int client)
 {
     if ( !_bInitialised )
     {
         ThrowError("ClientRecords: Not initialised.");
     }
 
-    if ( index < 1 || index >= MAXPLAYERS )
+    if ( client < 1 || client >= MAXPLAYERS )
     {
-        ThrowError("ClientRecords: Client index %d out of range.", index);
+        ThrowError("ClientRecords: Client index %d is out of range.", client);
     }
 
-    return _records[index];
+    return _records[client];
 }

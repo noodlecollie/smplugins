@@ -55,7 +55,11 @@ static stock void OnPluginEnabledStateChanged(ConVar convar, const char[] oldVal
 {
 }
 
-static stock void ConstructClientRecord(Dynamic &item)
+static stock void ConstructClientRecord(int client, Dynamic &item)
 {
-    item = UCC_ClientRecord();
+    UCC_ClientRecord record = UCC_ClientRecord();
+
+    record.Client = client;
+
+    item = record;
 }
