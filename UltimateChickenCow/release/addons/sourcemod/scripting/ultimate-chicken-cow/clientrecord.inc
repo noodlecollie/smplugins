@@ -8,11 +8,11 @@
 
 methodmap UCC_ClientRecord < Dynamic
 {
-    public UCC_ClientRecord()
+    public UCC_ClientRecord(int client)
     {
         Dynamic obj = Dynamic(64, 0);
 
-        obj.SetInt("Client", 0);
+        obj.SetInt("Client", client);
 
         return view_as<UCC_ClientRecord>(obj);
     }
@@ -39,12 +39,6 @@ methodmap UCC_ClientRecord < Dynamic
         {
             static DynamicOffset offset = INVALID_DYNAMIC_OFFSET;
             return this.GetIntByOffset(this.Private_GetOffset(offset, "Client"));
-        }
-
-        public set(int value)
-        {
-            static DynamicOffset offset = INVALID_DYNAMIC_OFFSET;
-            return this.SetIntByOffset(this.Private_GetOffset(offset, "Client"), value);
         }
     }
 }
