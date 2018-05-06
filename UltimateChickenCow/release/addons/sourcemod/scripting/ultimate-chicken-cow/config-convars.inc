@@ -21,3 +21,9 @@ void CreateConfigConVars()
                                             true,
                                             100000.0);
 }
+
+void DestroyConfigConVars()
+{
+    delete cvJumpForce;
+    cvJumpForce = null;
+}

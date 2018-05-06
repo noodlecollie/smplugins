@@ -36,6 +36,9 @@ void ClientRecords_Initialise(ClientRecord_InitFunc constructor)
     _fwdConstructor = CreateForward(ET_Ignore, Param_Cell, Param_CellByRef);
     AddToForward(_fwdConstructor, INVALID_HANDLE, constructor);
 
+    // Set this before we start calling for connected clients below.
+    _bInitialised = true;
+
     // Just in case this was called during a game, make sure we initialise
     // for all currently connected clients.
     for ( int i = 1; i <= MaxClients; ++i )
@@ -47,8 +50,6 @@ void ClientRecords_Initialise(ClientRecord_InitFunc constructor)
 
         ClientRecords_NotifyClientConnected(i);
     }
-
-    _bInitialised = true;
 }
 
 /**

@@ -13,6 +13,7 @@ methodmap UCC_ClientRecord < Dynamic
         Dynamic obj = Dynamic(64, 0);
 
         obj.SetInt("Client", client);
+        obj.SetBool("InJump", false);
 
         return view_as<UCC_ClientRecord>(obj);
     }
@@ -39,6 +40,21 @@ methodmap UCC_ClientRecord < Dynamic
         {
             static DynamicOffset offset = INVALID_DYNAMIC_OFFSET;
             return this.GetIntByOffset(this.Private_GetOffset(offset, "Client"));
+        }
+    }
+
+    property bool InJump
+    {
+        public get()
+        {
+            static DynamicOffset offset = INVALID_DYNAMIC_OFFSET;
+            return this.GetBoolByOffset(this.Private_GetOffset(offset, "InJump"));
+        }
+
+        public set(bool value)
+        {
+            static DynamicOffset offset = INVALID_DYNAMIC_OFFSET;
+            return this.SetBoolByOffset(this.Private_GetOffset(offset, "InJump"), value);
         }
     }
 }
