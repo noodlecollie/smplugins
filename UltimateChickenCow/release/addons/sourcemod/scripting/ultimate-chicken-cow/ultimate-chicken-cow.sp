@@ -17,9 +17,10 @@
 
 // Libraries
 #include "pluginctl/pluginctl.inc"
+#include "clientrecords/clientrecords.inc"
 
 #include "plugininfo.inc"
-#include "config-cvars.inc"
+#include "clientrecord.inc"
 
 #pragma semicolon 1
 #pragma newdecls required
@@ -29,16 +30,32 @@ public void OnPluginStart()
     LogMessage("[Starting: %s v%s]", PLUGIN_NAME, PLUGIN_VERSION);
 
     PCtl_Initialise(PLUGIN_IDENT, PLUGIN_VERSION, OnPluginEnabledStateChanged);
-    RegisterConfigCvars();
+    ClientRecords_Initialise(ConstructClientRecord);
 }
 
 public void OnPluginEnd()
 {
     LogMessage("Shutting down.");
 
+    ClientRecords_Destroy();
     PCtl_Shutdown();
+}
+
+public void OnClientConnected(int client)
+{
+    ClientRecords_NotifyClientConnected(client);
+}
+
+public void OnClientDisconnect(int client)
+{
+    ClientRecords_NotifyClientDisconnected(client);
 }
 
 static stock void OnPluginEnabledStateChanged(ConVar convar, const char[] oldValue, const char[] newValue)
 {
+}
+
+static stock void ConstructClientRecord(Dynamic &item)
+{
+    item = UCC_ClientRecord();
 }
