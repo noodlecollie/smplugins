@@ -2,3 +2,7 @@ Thumbs.db
 .DS_Store
 
 .vscode
+
+*.log
+*.prt
+*.vmx
