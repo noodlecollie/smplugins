@@ -33,7 +33,7 @@ void ClientRecords_Initialise(ClientRecord_InitFunc constructor)
         ThrowError("ClientRecords: Already initialised.");
     }
 
-    _fwdConstructor = CreateForward(ET_Ignore, Param_Cell);
+    _fwdConstructor = CreateForward(ET_Ignore, Param_CellByRef);
     AddToForward(_fwdConstructor, INVALID_HANDLE, constructor);
 
     // Just in case this was called during a game, make sure we initialise
@@ -96,7 +96,7 @@ void ClientRecords_NotifyClientConnected(int index)
     _records[index] = INVALID_DYNAMIC_OBJECT;
 
     Call_StartForward(_fwdConstructor);
-    Call_PushCell(_records[index]);
+    Call_PushCellRef(_records[index]);
     Call_Finish();
 
     if (_records[index] == INVALID_DYNAMIC_OBJECT )
