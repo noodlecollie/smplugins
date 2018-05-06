@@ -14,6 +14,7 @@
 */
 
 #include <sourcemod>
+#include <sdkhooks>
 
 // Libraries
 #include "pluginctl/pluginctl.inc"
@@ -48,10 +49,30 @@ public void OnPluginEnd()
 public void OnClientConnected(int client)
 {
     ClientRecords_NotifyClientConnected(client);
+
+    // If the plugin is loaded while clients are in the game,
+    // we need to hook them manually because OnClientPutInServer won't be called.
+    if ( IsClientInGame(client) )
+    {
+        HookEndTouch(client);
+    }
+}
+
+public void OnClientPutInServer(int client)
+{
+    HookEndTouch(client);
 }
 
 public void OnClientDisconnect(int client)
 {
+    UCC_ClientRecord record = view_as<UCC_ClientRecord>(ClientRecords_GetRecord(client));
+
+    if ( record.TouchHooked )
+    {
+        SDKUnhook(client, SDKHook_EndTouch, HandleEndTouch);
+        record.TouchHooked = false;
+    }
+
     ClientRecords_NotifyClientDisconnected(client);
 }
 
@@ -82,9 +103,21 @@ public Action OnPlayerRunCmd(int client,
     return Plugin_Continue;
 }
 
-
 static stock void OnPluginEnabledStateChanged(ConVar convar, const char[] oldValue, const char[] newValue)
 {
+}
+
+static stock Action HookEndTouch(int client)
+{
+    UCC_ClientRecord record = view_as<UCC_ClientRecord>(ClientRecords_GetRecord(client));
+
+    SDKHook(client, SDKHook_EndTouch, HandleEndTouch);
+    record.TouchHooked = true;
+}
+
+static stock Action HandleEndTouch(int entity, int other)
+{
+    GetClientContactNormal(entity);
 }
 
 static stock void ConstructClientRecord(int client, Dynamic &item)

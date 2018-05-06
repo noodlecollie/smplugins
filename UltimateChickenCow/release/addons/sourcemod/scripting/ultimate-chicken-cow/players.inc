@@ -59,3 +59,13 @@ void PerformLongJump(int client, const float vel[3], const float angles[3])
     // Apply.
     TeleportEntity(client, NULL_VECTOR, NULL_VECTOR, worldVelocity);
 }
+
+bool GetClientContactNormal(int client)
+{
+    float velocity[3] = { 0.0, ... };
+    velocity[0] = GetEntPropFloat(client, Prop_Send, "m_vecVelocity[0]");
+    velocity[1] = GetEntPropFloat(client, Prop_Send, "m_vecVelocity[1]");
+    velocity[2] = GetEntPropFloat(client, Prop_Send, "m_vecVelocity[2]");
+
+    LogMessage("Client %d velocity: %f %f %f", client, velocity[0], velocity[1], velocity[2]);
+}
