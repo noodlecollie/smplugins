@@ -30,7 +30,7 @@
 
 public void OnPluginStart()
 {
-    LogMessage("[Starting: %s v%s]", PLUGIN_NAME, PLUGIN_VERSION);
+    LogMessage("Starting: %s v%s", PLUGIN_NAME, PLUGIN_VERSION);
 
     PCtl_Initialise(PLUGIN_IDENT, PLUGIN_VERSION, OnPluginEnabledStateChanged);
     CreateConfigConVars();
@@ -52,21 +52,8 @@ public void OnClientConnected(int client)
     ClientRecords_NotifyClientConnected(client);
 }
 
-public void OnClientPutInServer(int client)
-{
-    HookTouch(client);
-}
-
 public void OnClientDisconnect(int client)
 {
-    UCC_ClientRecord record = view_as<UCC_ClientRecord>(ClientRecords_GetRecord(client));
-
-    if ( record.TouchHooked )
-    {
-        SDKUnhook(client, SDKHook_StartTouch, HandleTouch);
-        record.TouchHooked = false;
-    }
-
     ClientRecords_NotifyClientDisconnected(client);
 }
 
@@ -83,14 +70,29 @@ public Action OnPlayerRunCmd(int client,
                       int mouse[2])
 {
     UCC_ClientRecord record = view_as<UCC_ClientRecord>(ClientRecords_GetRecord(client));
+    float currentTime = GetGameTime();
+    int currentFlags = GetEntityFlags(client);
+    float minInterval = GetConVarFloat(cvLongJumpMinInterval) / 1000.0;
 
-    if ( (GetEntityFlags(client) & FL_ONGROUND) == FL_ONGROUND  // We must be on the ground
-         && (buttons & IN_JUMP) == IN_JUMP                      // We must be pressing jump
-         && !record.InJump                                      // We must have released the key after a previous jump
-         && (buttons & IN_DUCK) == IN_DUCK )                    // We must be pressing crouch
+    bool attemptingLongJump =
+         (buttons & IN_JUMP) == IN_JUMP                             // We must be pressing jump
+         && !record.InJump                                          // We must have released the key after a previous jump
+         && (buttons & IN_DUCK) == IN_DUCK                          // We must be pressing crouch
+         && currentTime - record.LastLongJumpTime >= minInterval;   // Enough time must have passed since the last long jump.
+
+    if ( attemptingLongJump )
     {
-        PerformLongJump(client, vel, angles);
-        record.InLongJump = true;
+        bool canPerformLongJump =
+            (currentFlags & FL_ONGROUND) == FL_ONGROUND // Either we're on the ground
+            || ClientCanWallJump(client, vel, angles);  // or next to something we can springboard off.
+
+        if ( canPerformLongJump )
+        {
+            // Apply forward force only when we're on the ground.
+            PerformLongJump(client, vel, angles, (currentFlags & FL_ONGROUND) == FL_ONGROUND);
+
+            record.LastLongJumpTime = currentTime;
+        }
     }
 
     record.InJump = (buttons & IN_JUMP) == IN_JUMP;
@@ -110,28 +112,7 @@ static stock void InitForCurrentClients()
         {
             OnClientConnected(client);
         }
-
-        if ( IsClientInGame(client) )
-        {
-            OnClientPutInServer(client);
-        }
     }
-}
-
-static stock Action HookTouch(int client)
-{
-    UCC_ClientRecord record = view_as<UCC_ClientRecord>(ClientRecords_GetRecord(client));
-
-    SDKHook(client, SDKHook_StartTouch, HandleTouch);
-    record.TouchHooked = true;
-}
-
-static stock Action HandleTouch(int entity, int other)
-{
-    float contact[3] = { 0.0, ... };
-    GetClientContactNormal(entity, contact);
-
-    return Plugin_Continue;
 }
 
 static stock void ConstructClientRecord(int client, Dynamic &item)

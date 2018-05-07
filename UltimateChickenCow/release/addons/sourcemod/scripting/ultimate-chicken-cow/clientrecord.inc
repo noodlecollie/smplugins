@@ -14,8 +14,8 @@ methodmap UCC_ClientRecord < Dynamic
 
         obj.SetInt("Client", client);
         obj.SetBool("InJump", false);
-        obj.SetBool("InLongJump", false);
         obj.SetBool("TouchHooked", false);
+        obj.SetFloat("LastLongJumpTime", 0.0);
 
         return view_as<UCC_ClientRecord>(obj);
     }
@@ -60,33 +60,18 @@ methodmap UCC_ClientRecord < Dynamic
         }
     }
 
-    property bool InLongJump
+    property float LastLongJumpTime
     {
         public get()
         {
             static DynamicOffset offset = INVALID_DYNAMIC_OFFSET;
-            return this.GetBoolByOffset(this.Private_GetOffset(offset, "InLongJump"));
+            return this.GetFloatByOffset(this.Private_GetOffset(offset, "LastLongJumpTime"));
         }
 
-        public set(bool value)
+        public set(float value)
         {
             static DynamicOffset offset = INVALID_DYNAMIC_OFFSET;
-            return this.SetBoolByOffset(this.Private_GetOffset(offset, "InLongJump"), value);
-        }
-    }
-
-    property bool TouchHooked
-    {
-        public get()
-        {
-            static DynamicOffset offset = INVALID_DYNAMIC_OFFSET;
-            return this.GetBoolByOffset(this.Private_GetOffset(offset, "TouchHooked"));
-        }
-
-        public set(bool value)
-        {
-            static DynamicOffset offset = INVALID_DYNAMIC_OFFSET;
-            return this.SetBoolByOffset(this.Private_GetOffset(offset, "TouchHooked"), value);
+            return this.SetFloatByOffset(this.Private_GetOffset(offset, "LastLongJumpTime"), value);
         }
     }
 }
