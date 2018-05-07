@@ -26,9 +26,8 @@ void PerformLongJump(int client, const float vel[3], const float angles[3], bool
     float worldVelocity[3] = { 0.0, ... };
     GetClientAbsVelocity(client, worldVelocity);
 
-    // We can end up falling quite fast, in which case our upward kick will feel weaker.
-    // This can make wall climbing a pain, so cancel out any existing vertical velocity.
-    worldVelocity[2] = 0.0;
+    // Take out some of the existing vertical velocity.
+    worldVelocity[2] *= GetConVarFloat(cvWallJumpVerticalVelocityBlend);
 
     // Prepare a vector for the velocity we will add.
     float extraVelocity[3] = { 0.0, ... };
@@ -51,7 +50,7 @@ void PerformLongJump(int client, const float vel[3], const float angles[3], bool
 
     // If this extra velocity would make us too fast on X or Y, clamp it.
     // We don't want to allow players to continually accumulate more and more velocity.
-    float axisVelLimit = onGround ? 450.0 : 125.0;
+    float axisVelLimit = GetConVarFloat(onGround ? cvLongJumpMaxXYVelocity : cvWallJumpMapXYVelocity);
     extraVelocity[0] = LimitAxialVelocity(worldVelocity[0], extraVelocity[0], axisVelLimit);
     extraVelocity[1] = LimitAxialVelocity(worldVelocity[1], extraVelocity[1], axisVelLimit);
 
