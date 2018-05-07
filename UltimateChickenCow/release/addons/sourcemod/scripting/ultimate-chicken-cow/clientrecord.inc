@@ -14,6 +14,7 @@ methodmap UCC_ClientRecord < Dynamic
 
         obj.SetInt("Client", client);
         obj.SetBool("InJump", false);
+        obj.SetBool("InLongJump", false);
         obj.SetBool("TouchHooked", false);
 
         return view_as<UCC_ClientRecord>(obj);
@@ -56,6 +57,21 @@ methodmap UCC_ClientRecord < Dynamic
         {
             static DynamicOffset offset = INVALID_DYNAMIC_OFFSET;
             return this.SetBoolByOffset(this.Private_GetOffset(offset, "InJump"), value);
+        }
+    }
+
+    property bool InLongJump
+    {
+        public get()
+        {
+            static DynamicOffset offset = INVALID_DYNAMIC_OFFSET;
+            return this.GetBoolByOffset(this.Private_GetOffset(offset, "InLongJump"));
+        }
+
+        public set(bool value)
+        {
+            static DynamicOffset offset = INVALID_DYNAMIC_OFFSET;
+            return this.SetBoolByOffset(this.Private_GetOffset(offset, "InLongJump"), value);
         }
     }
 

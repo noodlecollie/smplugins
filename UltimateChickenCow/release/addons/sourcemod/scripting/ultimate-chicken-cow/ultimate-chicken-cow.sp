@@ -35,6 +35,7 @@ public void OnPluginStart()
     PCtl_Initialise(PLUGIN_IDENT, PLUGIN_VERSION, OnPluginEnabledStateChanged);
     CreateConfigConVars();
     ClientRecords_Initialise(ConstructClientRecord);
+    InitForCurrentClients();
 }
 
 public void OnPluginEnd()
@@ -49,18 +50,11 @@ public void OnPluginEnd()
 public void OnClientConnected(int client)
 {
     ClientRecords_NotifyClientConnected(client);
-
-    // If the plugin is loaded while clients are in the game,
-    // we need to hook them manually because OnClientPutInServer won't be called.
-    if ( IsClientInGame(client) )
-    {
-        HookEndTouch(client);
-    }
 }
 
 public void OnClientPutInServer(int client)
 {
-    HookEndTouch(client);
+    HookTouch(client);
 }
 
 public void OnClientDisconnect(int client)
@@ -69,7 +63,7 @@ public void OnClientDisconnect(int client)
 
     if ( record.TouchHooked )
     {
-        SDKUnhook(client, SDKHook_EndTouch, HandleEndTouch);
+        SDKUnhook(client, SDKHook_StartTouch, HandleTouch);
         record.TouchHooked = false;
     }
 
@@ -96,6 +90,7 @@ public Action OnPlayerRunCmd(int client,
          && (buttons & IN_DUCK) == IN_DUCK )                    // We must be pressing crouch
     {
         PerformLongJump(client, vel, angles);
+        record.InLongJump = true;
     }
 
     record.InJump = (buttons & IN_JUMP) == IN_JUMP;
@@ -107,17 +102,36 @@ static stock void OnPluginEnabledStateChanged(ConVar convar, const char[] oldVal
 {
 }
 
-static stock Action HookEndTouch(int client)
+static stock void InitForCurrentClients()
+{
+    for ( int client = 1; client <= MaxClients; ++client )
+    {
+        if ( IsClientConnected(client) )
+        {
+            OnClientConnected(client);
+        }
+
+        if ( IsClientInGame(client) )
+        {
+            OnClientPutInServer(client);
+        }
+    }
+}
+
+static stock Action HookTouch(int client)
 {
     UCC_ClientRecord record = view_as<UCC_ClientRecord>(ClientRecords_GetRecord(client));
 
-    SDKHook(client, SDKHook_EndTouch, HandleEndTouch);
+    SDKHook(client, SDKHook_StartTouch, HandleTouch);
     record.TouchHooked = true;
 }
 
-static stock Action HandleEndTouch(int entity, int other)
+static stock Action HandleTouch(int entity, int other)
 {
-    GetClientContactNormal(entity);
+    float contact[3] = { 0.0, ... };
+    GetClientContactNormal(entity, contact);
+
+    return Plugin_Continue;
 }
 
 static stock void ConstructClientRecord(int client, Dynamic &item)

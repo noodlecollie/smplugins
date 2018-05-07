@@ -9,6 +9,9 @@
 #include <sourcemod>
 #include <sdktools>
 
+#include "smlib/math.inc"
+#include "smlib/arrays.inc"
+
 void PerformLongJump(int client, const float vel[3], const float angles[3])
 {
     // Velocity is local - +X is forward, +Y is left, +Z is up.
@@ -60,12 +63,48 @@ void PerformLongJump(int client, const float vel[3], const float angles[3])
     TeleportEntity(client, NULL_VECTOR, NULL_VECTOR, worldVelocity);
 }
 
-bool GetClientContactNormal(int client)
+bool GetClientContactNormal(int client, float[3] contact)
 {
     float velocity[3] = { 0.0, ... };
     velocity[0] = GetEntPropFloat(client, Prop_Send, "m_vecVelocity[0]");
     velocity[1] = GetEntPropFloat(client, Prop_Send, "m_vecVelocity[1]");
     velocity[2] = GetEntPropFloat(client, Prop_Send, "m_vecVelocity[2]");
 
-    LogMessage("Client %d velocity: %f %f %f", client, velocity[0], velocity[1], velocity[2]);
+    if ( velocity[0] != 0.0 || velocity[1] != 0.0 || velocity[2] != 0.0 )
+    {
+        NormalizeVector(velocity, velocity);
+    }
+    else
+    {
+        // Just trace down via gravity.
+        Math_MakeVector(0.0, 0.0, -1.0, velocity);
+    }
+
+    ScaleVector(velocity, GetConVarFloat(cvWallJumpTraceDist));
+
+    float mins[3] = { 0.0, ... };
+    float maxs[3] = { 0.0, ... };
+    float origin[3] = { 0.0, ... };
+    GetEntPropVector(client, Prop_Send, "m_vecMins", mins);
+    GetEntPropVector(client, Prop_Send, "m_vecMaxs", maxs);
+    GetClientAbsOrigin(client, origin);
+
+    float target[3] = { 0.0, ... };
+    AddVectors(origin, velocity, target);
+
+    Handle trace = TR_TraceHullFilterEx(origin, target, mins, maxs, MASK_SOLID, TraceFilterIgnoreClient, client);
+    bool didHit = TR_DidHit(trace);
+
+    if ( didHit )
+    {
+        TR_GetPlaneNormal(trace, contact);
+    }
+
+    CloseHandle(trace);
+    return didHit;
+}
+
+static stock bool TraceFilterIgnoreClient(int entity, int contentsMask, any data)
+{
+    return entity != view_as<int>(data);
 }
