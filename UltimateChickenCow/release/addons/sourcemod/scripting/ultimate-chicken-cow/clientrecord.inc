@@ -56,7 +56,7 @@ methodmap UCC_ClientRecord < Dynamic
         public set(bool value)
         {
             static DynamicOffset offset = INVALID_DYNAMIC_OFFSET;
-            return this.SetBoolByOffset(this.Private_GetOffset(offset, "InJump"), value);
+            this.SetBoolByOffset(this.Private_GetOffset(offset, "InJump"), value);
         }
     }
 
@@ -71,7 +71,7 @@ methodmap UCC_ClientRecord < Dynamic
         public set(float value)
         {
             static DynamicOffset offset = INVALID_DYNAMIC_OFFSET;
-            return this.SetFloatByOffset(this.Private_GetOffset(offset, "LastLongJumpTime"), value);
+            this.SetFloatByOffset(this.Private_GetOffset(offset, "LastLongJumpTime"), value);
         }
     }
 }

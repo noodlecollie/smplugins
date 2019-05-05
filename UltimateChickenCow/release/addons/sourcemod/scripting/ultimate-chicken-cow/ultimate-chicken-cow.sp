@@ -58,16 +58,16 @@ public void OnClientDisconnect(int client)
 }
 
 public Action OnPlayerRunCmd(int client,
-                      int &buttons,
-                      int &impulse,
-                      float vel[3],
-                      float angles[3],
-                      int &weapon,
-                      int &subtype,
-                      int &cmdnum,
-                      int &tickcount,
-                      int &seed,
-                      int mouse[2])
+                             int &buttons,
+                             int &impulse,
+                             float vel[3],
+                             float angles[3],
+                             int &weapon,
+                             int &subtype,
+                             int &cmdnum,
+                             int &tickcount,
+                             int &seed,
+                             int mouse[2])
 {
     UCC_ClientRecord record = view_as<UCC_ClientRecord>(ClientRecords_GetRecord(client));
     float currentTime = GetGameTime();
