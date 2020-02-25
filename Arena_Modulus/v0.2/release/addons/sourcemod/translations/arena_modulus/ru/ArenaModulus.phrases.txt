@@ -1,0 +1,29 @@
+// Translations for the Arena Modulus mode.
+
+"Phrases"
+{
+	// This string is translated into LANG_SERVER if a mode registers with no description.
+	// Must not be longer than 128 characters.
+	"am_no_description"
+	{
+		"ru"	"Нет описания."
+	}
+	
+	// No custom mode has been chosen yet.
+	"am_no_current_mode"
+	{
+		"ru"	"Нет никакого пользовательского режима в который играю сейчас."
+	}
+	
+	// Description
+	"am_description"
+	{
+		"ru"	"Описание"
+	}
+	
+	// Forced mode was invalid.
+	"am_force_mode_invalid"
+	{
+		"ru"	"Пользовательский режим с неверным ID был указан вручную, игнорируя переопределение."
+	}
+}

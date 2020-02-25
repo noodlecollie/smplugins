@@ -1,0 +1,210 @@
+// Translation phrases for the Assassination Game Mode.
+// First created by [X6] Herbius on Friday 10th June 2011.
+
+"Phrases"
+{
+	// Not enough players. There must be a minimum of 2 players on each team to run the Assassination mode.
+	//"as_notenoughplayers"
+	//{
+	//	"ru"	"Недостаточно игроков. В каждой команде должно быть минимум 2 игрока, чтобы начать режим Устранения."
+	//}
+
+	// Both team counts now 2 or above. Plugin is active. Restarting...
+	//"as_playersriseabovethreshold"
+	//{
+	//	"ru"	"Обе команды имею теперь 2 или больше игроков. Плагин активен. Перезапуск..."
+	//}
+
+	// One or both team counts now below 2. Plugin is dormant. Restarting...
+	//"as_playersdropbelowthreshold"
+	//{
+	//	"ru"	"Одна или обе команды имеют меньше 2 игроков. Плагин неактивен. Перезапуск..."
+	//}
+	
+	// Plugin state changed. Restarting map...
+	//"as_pluginstatechanged"
+	//{
+	//	"ru"	"Состояние плагина изменилось. Перезапуск карты..."
+	//}
+	
+	// Assigning new assassin failed.
+	"as_newassassinfailed"
+	{
+		"ru"	"Назначить нового убийцу не удалось."
+	}
+	
+	// Assigning new target failed.
+	"as_newtargetfailed"
+	{
+		"ru"	"Не удалось назначить новую цель."
+	}
+	
+	// Assassin
+	"as_assassin"
+	{
+		"ru"	"Убийца"
+	}
+	
+	// Target
+	"as_target"
+	{
+		"ru"	"Цель"
+	}
+	
+	// Assassination plugin will load on next map change.
+	//"as_pluginloadnextmapchange"
+	//{
+	//	"ru"	"Плагин Устранения будет загружен при следующей смене карты."
+	//}
+	
+	// Team names for score counters
+	// Red:
+	"as_red"
+	{
+		"ru"	"Красные:"
+	}
+	
+	// Blue:
+	"as_blue"
+	{
+		"ru"	"Синие:"
+	}
+	
+	// Playing to: (As in playing to a certain amount of points)
+	"as_playingto"
+	{
+		"ru"	"Игра до:"
+	}
+	
+	// Cannot re-assign players now.
+	"as_cannot_reassign_now"
+	{
+		"ru"	"Не могу пераспределить игроков сейчас. Пожалуйста, подождите, пока начнется раунд."
+	}
+	
+	// Displayed if no assassin or target exists.
+	"as_none"
+	{
+		"ru"	"Никого"
+	}
+	
+	// Unable to re-assign Assassin.
+	"as_unable_to_reassign_assassin"
+	{
+		"ru"	"Не удалось пераспределить Убийцу."
+	}
+	
+	// Assassin has been re-assigned.
+	"as_assassin_reassigned"
+	{
+		"#format"	"{1:s}"
+		"ru"	"Игрок {1} стал Убийцей."
+	}
+	
+	// Unable to re-assign Target.
+	"as_unable_to_reassign_target"
+	{
+		"ru"	"Не удалось пераспределить Цель."
+	}
+	
+	// Target has been re-assigned.
+	"as_target_reassigned"
+	{
+		"#format"	"{1:s}"
+		"ru"	"Игрок {1} стал Целью."
+	}
+	
+	// Client menu could not be created.
+	"as_menu_cannot_be_created"
+	{
+		"ru"	"Не удалось создать меню клиента."
+	}
+	
+	// -----Menu text-----
+	
+	// ===Help Menu===
+	// Assassination, v[version_number]
+	"as_title_help"
+	{
+		"#format"	"{1:s}"
+		"ru"		"Устранение, в{1}"
+	}
+	
+	// General plugin help dialogue.
+	// Should not go over 255 characters or it will be truncated.
+	// Newlines (\n) should be used approx. every 64 characters.
+	"as_dialogue_help"
+	{
+		"ru"	"В режиме игры «Устранение» команды могут набирать очки, только если\никто из их игроков не является убийцей. Первая команда\nдостигшая предела очков выигрывает раунд."
+	}
+	
+	// ===Score Menu===
+	// Score Menu Title
+	"as_score_menu_title"
+	{
+		"ru"	"Очков:"
+	}
+	
+	// This round:
+	"as_this_round"
+	{
+		"#format"	"{1:d}"
+		"ru"		"За раунд: {1}"
+	}
+	
+	// In total:
+	"as_in_total"
+	{
+		"#format"	"{1:d}"
+		"ru"		"Всего: {1}"
+	}
+	
+	// ===Switch Menu===
+	// Switch Init Menu Title
+	"as_switch_init_menu_title"
+	{
+		"ru"	"Тип игрока:"
+	}
+	
+	// Re-assigning assassin/target cancelled.
+	"as_reassign_cancelled"
+	{
+		"ru"	"Пераспределение убийцы/цели отменено."
+	}
+	
+	// Player is on incorrect team: <name>
+	"as_player_incorrect_team"
+	{
+		"ru"	"Игроков в неверной команде:"
+	}
+	
+	// Player is not valid: <name>
+	"as_player_not_valid"
+	{
+		"ru"	"Игрок не действителен:"
+	}
+	
+	// Player not found.
+	"as_player_not_found"
+	{
+		"ru"	"Игрок не найден."
+	}
+	
+	// <name> is now the assassin.
+	"as_player_now_assassin"
+	{
+		"ru"	"теперь убийца."
+	}
+	
+	// <name> is now the target.
+	"as_player_now_target"
+	{
+		"ru"	"теперь цель."
+	}
+	
+	// Switch Player Menu Title
+	"as_switch_player_menu_title"
+	{
+		"ru"	"Выберите игрока:"
+	}
+}

@@ -1,0 +1,139 @@
+// Translation phrases for the Assassination Game Mode.
+// First created by [X6] Herbius on Friday 10th June 2011.
+// Latest update: 24/10/11
+
+"Phrases"
+{
+	// Assigning new assassin failed.
+	"as_newassassinfailed"
+	{
+		"ru"	"Назначить нового убийцу не удалось."
+	}
+	
+	// Assigning new target failed.
+	"as_newtargetfailed"
+	{
+		"ru"	"Не удалось назначить новую цель."
+	}
+	
+	// Assassin
+	"as_assassin"
+	{
+		"ru"	"Убийца"
+	}
+	
+	// Target
+	"as_target"
+	{
+		"ru"	"Цель"
+	}
+	
+	// Team names for score counters
+	// Red:
+	"as_red"
+	{
+		"ru"	"Красные:"
+	}
+	
+	// Blue:
+	"as_blue"
+	{
+		"ru"	"Синие:"
+	}
+	
+	// Playing to: (as in playing to a certain amount of points)
+	"as_playingto"
+	{
+		"ru"	"Игра до:"
+	}
+	
+	// Cannot re-assign players now.
+	"as_cannot_reassign_now"
+	{
+		"ru"	"Не могу пераспределить игроков сейчас. Пожалуйста, подождите, пока начнется раунд."
+	}
+	
+	// Displayed if no assassin or target exists.
+	"as_none"
+	{
+		"ru"	"Никого"
+	}
+	
+	// Unable to re-assign Assassin.
+	"as_unable_to_reassign_assassin"
+	{
+		"ru"	"Не удалось пераспределить Убийцу."
+	}
+	
+	// Assassin has been re-assigned.
+	"as_assassin_reassigned"
+	{
+		"#format"	"{1:s}"
+		"ru"	"Игрок {1} стал Убийцей."
+	}
+	
+	// Unable to re-assign Target.
+	"as_unable_to_reassign_target"
+	{
+		"ru"	"Не удалось пераспределить Цель."
+	}
+	
+	// Target has been re-assigned.
+	"as_target_reassigned"
+	{
+		"#format"	"{1:s}"
+		"ru"	"Игрок {1} стал Целью."
+	}
+	
+	// Client menu could not be created.
+	"as_menu_cannot_be_created"
+	{
+		"ru"	"Не удалось создать меню клиента."
+	}
+	
+	// The round has been won.
+	"as_round_win"
+	{
+		"#format"	"{1:s},{2:d}"
+		"ru"		"{1} побеждает с {2} очками!"
+	}
+	
+	// -----Menu text-----
+	
+	// ===Help Menu===
+	// Assassination, v[version_number]
+	"as_title_help"
+	{
+		"#format"	"{1:s}"
+		"ru"		"Устранение, в{1}"
+	}
+	
+	// General plugin help dialogue.
+	// Should not go over 255 characters or it will be truncated.
+	// Newlines (\n) should be used approx. every 64 characters.
+	"as_dialogue_help"
+	{
+		"ru"	"В режиме игры «Устранение» команды могут набирать очки, только если\никто из их игроков не является убийцей. Первая команда\nдостигшая предела очков выигрывает раунд."
+	}
+	
+	// ===Score Menu===
+	// Score Menu Title
+	"as_score_menu_title"
+	{
+		"ru"	"Очков:"
+	}
+	
+	// This round:
+	"as_this_round"
+	{
+		"#format"	"{1:d}"
+		"ru"		"За раунд: {1}"
+	}
+	
+	// In total:
+	"as_in_total"
+	{
+		"#format"	"{1:d}"
+		"ru"		"Всего: {1}"
+	}
+}
