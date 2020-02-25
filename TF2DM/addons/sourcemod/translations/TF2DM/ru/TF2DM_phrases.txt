@@ -1,0 +1,14 @@
+"Phrases"
+{
+	// Health
+	"Health"
+	{
+		"ru"	"Здоровье"
+	}
+	
+	// Rage
+	"Rage"
+	{
+		"ru"	"Ярость"
+	}
+}
