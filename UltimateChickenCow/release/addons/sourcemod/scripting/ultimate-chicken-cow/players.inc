@@ -11,8 +11,20 @@
 
 #include "smlib/math.inc"
 #include "smlib/arrays.inc"
+#include "config-convars.inc"
 
-void PerformLongJump(int client, const float vel[3], const float angles[3], bool onGround)
+enum SpecialJumpType
+{
+    SJT_NoJump,
+    SJT_LongJump,       // A forward jump while the player is in contact with the floor
+    SJT_WallClimb,      // An upward jump while the player is facing a wall
+    SJT_Springboard,    // A jump off a wall that is behind the player
+};
+
+// TODO: We're doing lots of switching for various things here based on the jump type.
+// Really we need a proper class to store the attributes for each jump type, to
+// make the control flow easier to follow.
+void PerformSpecialJump(int client, const float vel[3], const float angles[3], SpecialJumpType jumpType)
 {
     // vel is local - +X is forward, +Y is left, +Z is up.
 
@@ -26,8 +38,11 @@ void PerformLongJump(int client, const float vel[3], const float angles[3], bool
     float worldVelocity[3] = { 0.0, ... };
     GetClientAbsVelocity(client, worldVelocity);
 
-    // Take out some of the existing vertical velocity.
-    worldVelocity[2] *= GetConVarFloat(cvWallJumpVerticalVelocityBlend);
+    if ( jumpType != SJT_LongJump )
+    {
+        // Take out some of the existing vertical velocity.
+        worldVelocity[2] *= GetConVarFloat(cvWallClimbVerticalVelocityBlend);
+    }
 
     // Prepare a vector for the velocity we will add.
     float extraVelocity[3] = { 0.0, ... };
@@ -40,17 +55,22 @@ void PerformLongJump(int client, const float vel[3], const float angles[3], bool
     moveKeyVelocity[2] = 0.0;
 
     // Get a direction vector from the movement key velocity.
+    // TODO: For a springboard jump, we want to base movement
+    // off the normal of the surface instead.
     extraVelocity[0] = moveKeyVelocity[0];
     extraVelocity[1] = moveKeyVelocity[1];
     NormalizeVector(extraVelocity, extraVelocity);
 
-    // Apply maximum forward force when we're looking straight ahead, when pitch is 0.
-    // This is accomplished using cos(pitch).
-    ScaleVector(extraVelocity, GetConVarFloat(cvLongJumpForwardForce) * Cosine(DegToRad(angles[0])));
+    if ( jumpType != SJT_WallClimb )
+    {
+        // Apply maximum forward force when we're looking straight ahead, when pitch is 0.
+        // This is accomplished using cos(pitch).
+        ScaleVector(extraVelocity, GetConVarFloat(jumpType == SJT_LongJump ? cvLongJumpForwardForce : cvSpringboardForwardForce) * Cosine(DegToRad(angles[0])));
+    }
 
     // If this extra velocity would make us too fast on X or Y, clamp it.
     // We don't want to allow players to continually accumulate more and more velocity.
-    float axisVelLimit = GetConVarFloat(onGround ? cvLongJumpMaxXYVelocity : cvWallJumpMapXYVelocity);
+    float axisVelLimit = GetAxialVelocityLimitForJump(jumpType);
     extraVelocity[0] = LimitAxialVelocity(worldVelocity[0], extraVelocity[0], axisVelLimit);
     extraVelocity[1] = LimitAxialVelocity(worldVelocity[1], extraVelocity[1], axisVelLimit);
 
@@ -68,20 +88,26 @@ void PerformLongJump(int client, const float vel[3], const float angles[3], bool
         pitch *= -1.0;
     }
 
-    extraVelocity[2] = GetConVarFloat(cvWallJumpUpwardForce) * Sine(DegToRad((pitch / 2.0) + 45));
+    extraVelocity[2] = GetConVarFloat(cvWallClimbUpwardForce) * Sine(DegToRad((pitch / 2.0) + 45));
 
     // Combine with existing velocity and apply to client.
     AddVectors(worldVelocity, extraVelocity, worldVelocity);
     TeleportEntity(client, NULL_VECTOR, NULL_VECTOR, worldVelocity);
 }
 
-bool ClientCanWallJump(int client, const float[3] localVelocity, const float[3] angles)
+SpecialJumpType ClientCanPerformSpecialJump(int client, const float[3] localVelocity, const float[3] angles)
 {
+    // If the player is on the ground, we only allow long jumps.
+    if ( (GetEntityFlags(client) & FL_ONGROUND) == FL_ONGROUND )
+    {
+        return SJT_LongJump;
+    }
+
     float worldVelocity[3] = { 0.0, ... };
     GetAbsVelocity(localVelocity, angles, worldVelocity);
 
     NormalizeVector(worldVelocity, worldVelocity);
-    ScaleVector(worldVelocity, GetConVarFloat(cvWallJumpTraceDist));
+    ScaleVector(worldVelocity, GetConVarFloat(cvWallClimbTraceDist));
 
     float mins[3] = { 0.0, ... };
     float maxs[3] = { 0.0, ... };
@@ -94,6 +120,7 @@ bool ClientCanWallJump(int client, const float[3] localVelocity, const float[3] 
     mins[2] += 16.0;
     maxs[2] -= 16.0;
 
+    // First of all, perform a trace in the direction of movement.
     float target[3] = { 0.0, ... };
     AddVectors(origin, worldVelocity, target);
 
@@ -101,7 +128,64 @@ bool ClientCanWallJump(int client, const float[3] localVelocity, const float[3] 
     bool didHit = TR_DidHit(trace);
     CloseHandle(trace);
 
-    return didHit;
+    if ( didHit )
+    {
+        return SJT_WallClimb;
+    }
+
+    // Also perform a trace for whatever is behind the client.
+    float backwards[3] = { 0.0, ... };
+    GetAngleVectors(angles, backwards, NULL_VECTOR, NULL_VECTOR);
+    NegateVector(backwards);
+
+    // Only use the X and Y components of this vector.
+    backwards[2] = 0.0;
+
+    // Only trace backwards if we have a proper backwards direction in X/Y.
+    if ( !IsNullVector(backwards) )
+    {
+        // Calculate the target to trace to.
+        NormalizeVector(backwards, backwards);
+        ScaleVector(backwards, GetConVarFloat(cvWallClimbTraceDist));
+        AddVectors(origin, backwards, target);
+
+        Handle backTrace = TR_TraceHullFilterEx(origin, target, mins, maxs, MASK_SOLID, TraceFilterIgnoreClient, client);
+        didHit = TR_DidHit(backTrace);
+        CloseHandle(backTrace);
+
+        if ( didHit )
+        {
+            return SJT_Springboard;
+        }
+    }
+
+    return SJT_NoJump;
+}
+
+static stock float GetAxialVelocityLimitForJump(SpecialJumpType jumpType)
+{
+    switch ( jumpType )
+    {
+        case SJT_LongJump:
+        {
+            return GetConVarFloat(cvLongJumpMaxXYVelocity);
+        }
+
+        case SJT_WallClimb:
+        {
+            return GetConVarFloat(cvWallClimbMaxXYVelocity);
+        }
+
+        case SJT_Springboard:
+        {
+            return GetConVarFloat(cvSpringboardMaxXYVelocity);
+        }
+
+        default:
+        {
+            return 0.0;
+        }
+    }
 }
 
 static stock bool TraceFilterIgnoreClient(int entity, int contentsMask, any data)

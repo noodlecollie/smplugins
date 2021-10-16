@@ -71,7 +71,6 @@ public Action OnPlayerRunCmd(int client,
 {
     UCC_ClientRecord record = view_as<UCC_ClientRecord>(ClientRecords_GetRecord(client));
     float currentTime = GetGameTime();
-    int currentFlags = GetEntityFlags(client);
     float minInterval = GetConVarFloat(cvLongJumpMinInterval) / 1000.0;
 
     bool attemptingLongJump =
@@ -82,15 +81,11 @@ public Action OnPlayerRunCmd(int client,
 
     if ( attemptingLongJump )
     {
-        bool canPerformLongJump =
-            (currentFlags & FL_ONGROUND) == FL_ONGROUND // Either we're on the ground
-            || ClientCanWallJump(client, vel, angles);  // or next to something we can springboard off.
+        SpecialJumpType jumpType = ClientCanPerformSpecialJump(client, vel, angles);
 
-        if ( canPerformLongJump )
+        if ( jumpType != SJT_NoJump )
         {
-            // Apply forward force only when we're on the ground.
-            PerformLongJump(client, vel, angles, (currentFlags & FL_ONGROUND) == FL_ONGROUND);
-
+            PerformSpecialJump(client, vel, angles, jumpType);
             record.LastLongJumpTime = currentTime;
         }
     }

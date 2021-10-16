@@ -1,0 +1,45 @@
+[
+	{
+		"label": "Compile Ultimate Chicken Cow",
+		"type": "shell",
+		"command": "C:\\Program Files (x86)\\Steam\\steamapps\\common\\Team Fortress 2\\tf\\addons\\sourcemod\\scripting\\spcomp.exe",
+		"args":
+		[
+			"${workspaceFolder}\\UltimateChickenCow\\release\\addons\\sourcemod\\scripting\\ultimate-chicken-cow\\ultimate-chicken-cow.sp",
+			"-E",
+			"-i",
+			"${workspaceFolder}\\libraries",
+			"-i",
+			"${workspaceFolder}\\3rdpartylibraries",
+			"-o",
+			"${workspaceFolder}\\UltimateChickenCow\\release\\addons\\sourcemod\\plugins\\ultimate-chicken-cow.smx"
+		],
+		"problemMatcher":
+		{
+			"owner": "sp",
+			"fileLocation": "absolute",
+			"pattern":
+			[
+				{
+					"regexp": "^(.+\\..+)\\((\\d+)\\) : (warning|error|fatal error) \\d+: (.+)$",
+					"file": 1,
+					"line": 2,
+					"severity": 3,
+					"message": 4
+				}
+			]
+		}
+	},
+	{
+		"label": "Copy Ultimate Chicken Cow",
+		"type": "shell",
+		"command": "cp",
+		"args": [
+			"-r",
+			"-force",
+			"${workspaceFolder}\\UltimateChickenCow\\release\\addons",
+			"C:\\Program Files (x86)\\Steam\\steamapps\\common\\Team Fortress 2\\tf"
+		],
+		"problemMatcher": []
+	}
+]

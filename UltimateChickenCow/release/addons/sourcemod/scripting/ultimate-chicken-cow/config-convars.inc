@@ -9,12 +9,14 @@
 #include "pluginctl/pluginctl.inc"
 
 stock ConVar cvLongJumpForwardForce = null;
-stock ConVar cvWallJumpUpwardForce = null;
-stock ConVar cvWallJumpVerticalVelocityBlend = null;
-stock ConVar cvWallJumpTraceDist = null;
+stock ConVar cvWallClimbUpwardForce = null;
+stock ConVar cvSpringboardForwardForce = null;
+stock ConVar cvWallClimbVerticalVelocityBlend = null;
+stock ConVar cvWallClimbTraceDist = null;
 stock ConVar cvLongJumpMinInterval = null;
 stock ConVar cvLongJumpMaxXYVelocity = null;
-stock ConVar cvWallJumpMapXYVelocity = null;
+stock ConVar cvWallClimbMaxXYVelocity = null;
+stock ConVar cvSpringboardMaxXYVelocity = null;
 
 void CreateConfigConVars()
 {
@@ -28,30 +30,40 @@ void CreateConfigConVars()
                                   true,
                                   100000.0);
 
-    cvWallJumpUpwardForce =
-        PCtl_CreatePrefixedConVar("walljump_upward_force",
+    cvWallClimbUpwardForce =
+        PCtl_CreatePrefixedConVar("wallclimb_upward_force",
                                   "500",
-                                  "How much upward forward force to apply to a player when they perform a wall jump.",
+                                  "How much upward forward force to apply to a player when they perform a wall climbing jump.",
                                   FCVAR_NOTIFY | FCVAR_ARCHIVE,
                                   true,
                                   0.0,
                                   true,
                                   100000.0);
 
-    cvWallJumpVerticalVelocityBlend =
-        PCtl_CreatePrefixedConVar("walljump_vertical_velocity_blend",
+    cvSpringboardForwardForce =
+        PCtl_CreatePrefixedConVar("springboard_forward_force",
+                                  "300",
+                                  "How much forward force to apply to a player when they perform a wall springboard jump.",
+                                  FCVAR_NOTIFY | FCVAR_ARCHIVE,
+                                  true,
+                                  0.0,
+                                  true,
+                                  100000.0);
+
+    cvWallClimbVerticalVelocityBlend =
+        PCtl_CreatePrefixedConVar("wallclimb_vertical_velocity_blend",
                                   "0.3",
-                                  "How much existing vertical velocity to keep when applying walljump force. 0 means fall velocity is completely overridden.",
+                                  "How much existing vertical velocity to keep when applying wall climb force. 0 means fall velocity is completely overridden.",
                                   FCVAR_NOTIFY | FCVAR_ARCHIVE,
                                   true,
                                   0.0,
                                   true,
                                   1.0);
 
-    cvWallJumpTraceDist =
-        PCtl_CreatePrefixedConVar("walljump_tracedist",
+    cvWallClimbTraceDist =
+        PCtl_CreatePrefixedConVar("wallclimb_tracedist",
                                   "4",
-                                  "How far in the direction of motion to trace for collisions when wall jumping.",
+                                  "How far in the direction of motion to trace for collisions when wall climbing.",
                                   FCVAR_NOTIFY | FCVAR_ARCHIVE,
                                   true,
                                   0.1,
@@ -77,10 +89,20 @@ void CreateConfigConVars()
                                   true,
                                   10000.0);
 
-    cvWallJumpMapXYVelocity =
-        PCtl_CreatePrefixedConVar("walljump_max_xy_velocity",
+    cvWallClimbMaxXYVelocity =
+        PCtl_CreatePrefixedConVar("wallclimb_max_xy_velocity",
                                   "100",
-                                  "Speed limit along the X or Y axis after a wall jump impulse.",
+                                  "Speed limit along the X or Y axis after a wall climb impulse.",
+                                  FCVAR_NOTIFY | FCVAR_ARCHIVE,
+                                  true,
+                                  0.0,
+                                  true,
+                                  10000.0);
+
+    cvSpringboardMaxXYVelocity =
+        PCtl_CreatePrefixedConVar("springboard_max_xy_velocity",
+                                  "450",
+                                  "Speed limit along the X or Y axis after a wall springboard impulse.",
                                   FCVAR_NOTIFY | FCVAR_ARCHIVE,
                                   true,
                                   0.0,
@@ -93,14 +115,17 @@ void DestroyConfigConVars()
     delete cvLongJumpForwardForce;
     cvLongJumpForwardForce = null;
 
-    delete cvWallJumpUpwardForce;
-    cvWallJumpUpwardForce = null;
+    delete cvWallClimbUpwardForce;
+    cvWallClimbUpwardForce = null;
 
-    delete cvWallJumpVerticalVelocityBlend;
-    cvWallJumpVerticalVelocityBlend = null;
+    delete cvSpringboardForwardForce;
+    cvSpringboardForwardForce = null;
 
-    delete cvWallJumpTraceDist;
-    cvWallJumpTraceDist = null;
+    delete cvWallClimbVerticalVelocityBlend;
+    cvWallClimbVerticalVelocityBlend = null;
+
+    delete cvWallClimbTraceDist;
+    cvWallClimbTraceDist = null;
 
     delete cvLongJumpMinInterval;
     cvLongJumpMinInterval = null;
@@ -108,6 +133,9 @@ void DestroyConfigConVars()
     delete cvLongJumpMaxXYVelocity;
     cvLongJumpMaxXYVelocity = null;
 
-    delete cvWallJumpMapXYVelocity;
-    cvWallJumpMapXYVelocity = null;
+    delete cvWallClimbMaxXYVelocity;
+    cvWallClimbMaxXYVelocity = null;
+
+    delete cvSpringboardMaxXYVelocity;
+    cvSpringboardMaxXYVelocity = null;
 }
