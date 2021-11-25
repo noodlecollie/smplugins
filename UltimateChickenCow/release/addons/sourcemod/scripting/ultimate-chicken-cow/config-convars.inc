@@ -42,7 +42,7 @@ void CreateConfigConVars()
 
     cvSpringboardForwardForce =
         PCtl_CreatePrefixedConVar("springboard_forward_force",
-                                  "300",
+                                  "400",
                                   "How much forward force to apply to a player when they perform a wall springboard jump.",
                                   FCVAR_NOTIFY | FCVAR_ARCHIVE,
                                   true,
@@ -62,7 +62,7 @@ void CreateConfigConVars()
 
     cvWallClimbTraceDist =
         PCtl_CreatePrefixedConVar("wallclimb_tracedist",
-                                  "4",
+                                  "8",
                                   "How far in the direction of motion to trace for collisions when wall climbing.",
                                   FCVAR_NOTIFY | FCVAR_ARCHIVE,
                                   true,

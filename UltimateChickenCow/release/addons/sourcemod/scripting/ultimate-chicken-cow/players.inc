@@ -100,6 +100,7 @@ SpecialJumpType ClientCanPerformSpecialJump(int client, const float[3] localVelo
     // If the player is on the ground, we only allow long jumps.
     if ( (GetEntityFlags(client) & FL_ONGROUND) == FL_ONGROUND )
     {
+        LogMessage("Can perform long jump");
         return SJT_LongJump;
     }
 
@@ -130,6 +131,7 @@ SpecialJumpType ClientCanPerformSpecialJump(int client, const float[3] localVelo
 
     if ( didHit )
     {
+        LogMessage("Can perform wall climb");
         return SJT_WallClimb;
     }
 
@@ -155,10 +157,12 @@ SpecialJumpType ClientCanPerformSpecialJump(int client, const float[3] localVelo
 
         if ( didHit )
         {
+            LogMessage("Can perform springboard");
             return SJT_Springboard;
         }
     }
 
+    LogMessage("Can't perform special jump");
     return SJT_NoJump;
 }
 
