@@ -8,7 +8,7 @@
 #pragma newdecls required
 
 #include <sourcemod>
-#include "defs.inc"
+#include "ar_defs.inc"
 #include "arena_roulette.inc"
 #include "mode_table.inc"
 
@@ -23,7 +23,7 @@ stock any Native_RegisterMode(Handle plugin, int numParams)
 
 	GetPluginInfo(plugin, PlInfo_Name, modeName, sizeof(modeName));
 
-	int entryIndex = FindNextFreeModeTableEntry();
+	int entryIndex = ARMode_FindNextFreeModeTableEntry();
 
 	if ( entryIndex < 0 )
 	{

@@ -9,11 +9,13 @@
 
 #include <sourcemod>
 #include "arena_roulette.inc"
-#include "defs.inc"
+#include "ar_defs.inc"
 
 enum struct ARMode
 {
 	Handle implementerPlugin;
+	int numTimesPlayed;
+
 	ArenaRouletteFwd_CanSelectMode canSelectMode;
 
 	void SetForward(ArenaRoulette_ForwardType fwdType, Function fwdFunction)
@@ -35,7 +37,7 @@ enum struct ARMode
 
 stock ARMode GlobalModeTable[MAX_MODES];
 
-stock int FindNextFreeModeTableEntry()
+stock int ARMode_FindNextFreeModeTableEntry()
 {
 	for ( int index = 0; index < MAX_MODES; ++index )
 	{
@@ -46,4 +48,19 @@ stock int FindNextFreeModeTableEntry()
 	}
 
 	return -1;
+}
+
+stock void ARMode_ClearAllPlayCounters()
+{
+	for ( int index = 0; index < MAX_MODES; ++index )
+	{
+		GlobalModeTable[index].numTimesPlayed = 0;
+	}
+}
+
+stock int ARMode_ChooseLeastPlayedMode()
+{
+	// Find number of modes with least number of plays
+	// Put all these modes into an array (of MAX_MODES)
+	// Choose a random index into this array
 }
